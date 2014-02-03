@@ -32,13 +32,13 @@ ssize_t FS_Img::img_read(TSK_OFF_T offset, char* dst_buf, size_t count){
 }
 
 
-static uint8_t
-yaffsfs_read_header(YAFFSFS_INFO * yfs, YaffsHeader ** header,
+ uint8_t
+yaffsfs_read_header(YAFFSFS_INFO * yfs, YaffsHeader  &header,
     TSK_OFF_T offset)
 {
     unsigned char *hdr;
     ssize_t cnt;
-    YaffsHeader *head;
+    YaffsHeader *head = &header;
     FS_Img *fs = &(yfs->fs_info);
 
     if ((hdr = (unsigned char *) tsk_malloc(yfs->page_size)) == NULL) {
@@ -81,7 +81,7 @@ yaffsfs_read_header(YAFFSFS_INFO * yfs, YaffsHeader ** header,
 
     free(hdr);
 
-    *header = head;
+    //*header = head;
     return 0;
 }
 
@@ -94,13 +94,13 @@ yaffsfs_read_header(YAFFSFS_INFO * yfs, YaffsHeader ** header,
 *
 * @returns 0 on success and 1 on error
 */
-static uint8_t
-yaffsfs_read_spare(YAFFSFS_INFO * yfs, YaffsSpare ** spare,
+ uint8_t
+yaffsfs_read_spare(YAFFSFS_INFO * yfs, YaffsSpare &spare,
     TSK_OFF_T offset)
 {
     unsigned char *spr;
     ssize_t cnt;
-    YaffsSpare *sp;
+    YaffsSpare *sp = &spare;
     FS_Img *fs = &(yfs->fs_info);
 
     uint32_t seq_number;
@@ -127,10 +127,10 @@ yaffsfs_read_spare(YAFFSFS_INFO * yfs, YaffsSpare ** spare,
     cnt = fs->img_read(offset, (char *) spr, yfs->spare_size);
     if (cnt == -1 || cnt < yfs->spare_size) {
         // couldn't read sufficient bytes...
-        if (spare) {
+        //if (spare) {
             free(spr);
-            *spare = NULL;
-        }
+            //*spare = NULL;
+        //}
         return 1;
     }
 
@@ -170,7 +170,7 @@ yaffsfs_read_spare(YAFFSFS_INFO * yfs, YaffsSpare ** spare,
     }
 
     free(spr);
-    *spare = sp;
+    //*spare = sp;
 
     return 0;
 }
@@ -193,22 +193,17 @@ yaffsfs_is_spare_valid(YAFFSFS_INFO * yfs, YaffsSpare * spare)
 
 static uint8_t
 yaffsfs_read_chunk(YAFFSFS_INFO * yfs,
-    YaffsHeader ** header, YaffsSpare ** spare, TSK_OFF_T offset)
+    YaffsHeader  &header, YaffsSpare &spare, TSK_OFF_T offset)
 {
     TSK_OFF_T header_offset = offset;
     TSK_OFF_T spare_offset = offset + yfs->page_size;
 
-    if (header == NULL || spare == NULL) {
-        return 1;
-    }
 
     if (yaffsfs_read_header(yfs, header, header_offset) != 0) {
         return 1;
     }
 
     if (yaffsfs_read_spare(yfs, spare, spare_offset) != 0) {
-        free(*header);
-        *header = NULL;
         return 1;
     }
 

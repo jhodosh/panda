@@ -39,6 +39,8 @@ extern "C" {
 #include <map>
 #include <string>
 
+#include "tsk_yaffs.h"
+
 // These need to be extern "C" so that the ABI is compatible with
 // QEMU/PANDA, which is written in C
 extern "C" {
@@ -61,8 +63,15 @@ FILE* writelog;
 FILE* sdcard_log;
 static int nand_dma_read_outstanding_bytes = 0;
 static uint32_t nand_current_buffer_address = 0;
+static uint32_t nand_next_read_flash_address;
 static int mmc_dma_read_outstanding_sectors = 0;
 static uint32_t mmc_current_buffer_address = 0;
+YAFFSFS_INFO state;
+
+static void printYaffsHeader(FILE* file, YaffsHeader& header){
+    fprintf(file, "obj_type: %#X parent_id: %#X, name: %s, file_mode: %#X is_shrink: %#X inband_obj_id\n",
+            header.obj_type, header.parent_id, header.name, header.is_shrink, header.inband_obj_id);
+}
 
 static uint32_t nand_dev_do_cmd(GoldfishNandDevice *s, uint32_t cmd)
 {
@@ -107,6 +116,7 @@ static uint32_t nand_dev_do_cmd(GoldfishNandDevice *s, uint32_t cmd)
   //      cpu_memory_rw(cpu_single_env,s->data, &dev->data[addr], size, 1);
         nand_current_buffer_address = s->data;
         nand_dma_read_outstanding_bytes = size;
+        nand_next_read_flash_address = addr;
         fprintf(writelog, "Read %d bytes at offset %#lX\n",size, addr);
         return size;
     case NAND_CMD_WRITE_BATCH:
@@ -122,6 +132,18 @@ static uint32_t nand_dev_do_cmd(GoldfishNandDevice *s, uint32_t cmd)
         fprintf(writelog, "Wrote %d bytes at offset %#lX\n", size, addr);
         uint8_t tmp[size];
         cpu_memory_rw_debug(cpu_single_env,s->data, tmp, size, 0);
+        state.fs_info.img_write(addr,tmp, size);
+        if(state.page_size == (addr % (state.page_size + state.spare_size))){
+            YaffsSpare spare;
+            yaffsfs_read_spare(&state, spare, addr);
+            fprintf(writelog, "Wrote spare seq %#X obj %#X chunk %#X\n", spare.seq_number, spare.object_id, spare.chunk_id);
+        }else if(0 == (addr % (state.page_size + state.spare_size))){
+            YaffsHeader header;
+            yaffsfs_read_header(&state, header, addr);
+            printYaffsHeader(writelog, header);
+        }else{
+	  fprintf(writelog, "UNALIGNED WRITE!\n");
+	}
         fwrite(tmp, 1, size,  writelog);
         return size;
     case NAND_CMD_ERASE_BATCH:
@@ -529,6 +551,20 @@ int on_dma(CPUState *env, uint32_t is_write, uint8_t* src_addr, uint64_t dest_ad
         fprintf(writelog, "\n");
         nand_dma_read_outstanding_bytes -= num_bytes;
         nand_current_buffer_address += num_bytes;
+    
+        state.fs_info.img_write(nand_next_read_flash_address,src_addr, num_bytes);
+        if(state.page_size == (nand_next_read_flash_address % (state.page_size + state.spare_size))){
+            YaffsSpare spare;
+            yaffsfs_read_spare(&state, spare, nand_next_read_flash_address);
+            fprintf(writelog, "Read spare seq %#X obj %#X chunk %#X\n", spare.seq_number, spare.object_id, spare.chunk_id);
+        }else if(0 == (nand_next_read_flash_address % (state.page_size + state.spare_size))){
+            YaffsHeader header;
+            yaffsfs_read_header(&state, header, nand_next_read_flash_address);
+            printYaffsHeader(writelog, header);
+        }else{
+	  fprintf(writelog,"READ UNALIGNED!!! %#X\n", nand_next_read_flash_address);
+	}
+        nand_next_read_flash_address += num_bytes;
     }
 }
 bool init_plugin(void *self) {
@@ -567,6 +603,9 @@ bool init_plugin(void *self) {
     writelog = fopen("/scratch/writelog.txt","wb");
     sdcard_log = fopen("/scratch/sdcardlog.txt", "wb");
     
+    state.page_size = 2048;
+    state.spare_size = 64;
+
     return true;
 }
 
@@ -577,3 +616,25 @@ void uninit_plugin(void *self) {
     if(sdcard_log)
         fclose(sdcard_log);
 }
+
+bool FS_Img::img_write(TSK_OFF_T offset, uint8_t* src_buff, size_t count){
+    bool largeEnough = this->ensure_capacity(offset+count);
+    if (largeEnough)
+        memcpy(this->buffer + offset, src_buff, count);
+    return largeEnough;
+}
+
+bool FS_Img::ensure_capacity(size_t size){
+    if (size > this->buffer_len){
+        void* tmp = realloc(this->buffer, size);
+        if(!tmp) return false;
+        this->buffer = static_cast<uint8_t*>(tmp);
+        this->buffer_len = size;
+        return true;
+    }else{
+        return true;
+    }
+}
+
+FS_Img::FS_Img(char* filename){}
+FS_Img::FS_Img(){}

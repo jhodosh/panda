@@ -37,9 +37,11 @@ public:
     FS_Img();
     FS_Img(char* filename);
     ssize_t img_read(TSK_OFF_T offset, char* dst_buf, size_t count);
+    bool img_write(TSK_OFF_T offset, uint8_t* src_buff, size_t count);
 private:
     uint8_t* buffer;
     ssize_t buffer_len = 0;
+    bool ensure_capacity(size_t size);
 };
     
     
@@ -266,6 +268,14 @@ typedef enum {
 
 #define YAFFS_FILE_CONTENT_LEN 0
 
+    
+     uint8_t
+yaffsfs_read_spare(YAFFSFS_INFO * yfs, YaffsSpare &spare,
+    TSK_OFF_T offset);
+ uint8_t
+yaffsfs_read_header(YAFFSFS_INFO * yfs, YaffsHeader &header,
+    TSK_OFF_T offset);
+    
 //#ifdef __cplusplus
 //}
 //#endif
