@@ -542,8 +542,30 @@ int before_loadvm(void){
     return 0;
 }
 
+static bool golfish_nand_specific_yaffs_dma(
+    target_phys_addr_t& last_aligned_target, /* */
+    uint32_t num_bytes,
+    uint32_t dest_addr
+)
+{
 
+    if(num_bytes == 1028){
+        if (last_aligned_target){ return true; }
+        else {
+            last_aligned_target = dest_addr;
+            return false;
+        }
+    }else if(num_bytes == 2048){
+        last_aligned_target = dest_addr;
+        return true;
+    }
+    return false;
+}
+
+static target_phys_addr_t last_aligned_target = 0;
 int on_dma(CPUState *env, uint32_t is_write, uint8_t* src_addr, uint64_t dest_addr, uint32_t num_bytes){
+    /* QEMU will break up DMA into multiple chunks, because the guest's physical memory is not contiguous
+       in QEMU's virtual memory. */
     if(is_write && mmc_dma_read_outstanding_sectors > 0 && dest_addr == mmc_current_buffer_address){
         fprintf(sdcard_log, "FILE READ\n");
         fwrite(src_addr,1,num_bytes, sdcard_log);
@@ -566,13 +588,22 @@ int on_dma(CPUState *env, uint32_t is_write, uint8_t* src_addr, uint64_t dest_ad
                 fprintf(writelog, "Error reading spare!\n");
             else
                 fprintf(writelog, "Read spare seq %#X obj %#X chunk %#X\n", spare.seq_number, spare.object_id, spare.chunk_id);
-        }else if(0 == (nand_next_read_flash_address % (state.page_size + state.spare_size))){
-            YaffsHeader header;
-            int ret = yaffsfs_read_header(&state, header, nand_next_read_flash_address);
-            if(ret)
-                fprintf(writelog, "error reading header\n");
-            else
-                printYaffsHeader(writelog, header);
+        }else if(0 == (nand_next_read_flash_address % (state.page_size + state.spare_size)) ||
+            1024 == (nand_next_read_flash_address % (state.page_size + state.spare_size))
+        ){
+            //bool pageReady = golfish_nand_specific_yaffs_dma(last_aligned_target, num_bytes, nand_next_read_flash_address);
+            bool pageReady = last_aligned_target != 0;
+            if(pageReady){
+                YaffsHeader header;
+                int ret = yaffsfs_read_header(&state, header, last_aligned_target);
+                if(ret)
+                    fprintf(writelog, "error reading header\n");
+                else
+                    printYaffsHeader(writelog, header);
+                last_aligned_target = 0;
+            } else {
+                last_aligned_target = nand_next_read_flash_address;
+            }
         }else{
 	  fprintf(writelog,"READ UNALIGNED!!! %#X\n", nand_next_read_flash_address);
 	}
