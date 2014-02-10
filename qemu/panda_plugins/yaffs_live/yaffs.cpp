@@ -37,13 +37,29 @@ static int tsk_fprintf(FILE* output, const char* format, ...){
 
 ssize_t FS_Img::img_read(TSK_OFF_T offset, char* dst_buf, size_t count){
     if(offset >= this->buffer_len){
+        printf("ERROR: offset %#X vs len %#X\n", offset, this->buffer_len);
         return -1;
     }
-    if(offset < 0) return -1;
-    if(offset + count > this->buffer_len) return -1;
-    if(count < 1) return -1;
-    if(nullptr == dst_buf) return -1;
-    if(!this->buffer) return -1;
+    if(offset < 0){
+        printf("ERROR offset %#X\n", offset);
+        return -1;
+    }
+    if(offset + count > this->buffer_len){
+        printf("ERROR: offset %#X + count %#X  vs len %#X\n", offset, count, this->buffer_len);
+        return -1;
+    }
+    if(count < 1){
+        printf("ERROR: count %#X\n", count);
+        return -1;
+    }
+    if(nullptr == dst_buf){
+        printf("ERROR: dst_buf null\n");
+        return -1;
+    }
+    if(!this->buffer){
+        printf("ERROR: buffer is null\n");
+        return -1;
+    }
     memcpy(dst_buf, this->buffer+offset, count);
     return count;
 }
@@ -102,7 +118,7 @@ yaffs_initialize_spare_format(YAFFSFS_INFO * yfs, TSK_OFF_T maxBlocksToTest){
 
     int thisChunkBase;
     int lastChunkBase;
-
+#if(0)
     // The spare area needs to be at least 16 bytes to run the test
     if(yfs->spare_size < 16){
         if(tsk_verbose && (! yfs->autoDetect)){
@@ -121,6 +137,7 @@ yaffs_initialize_spare_format(YAFFSFS_INFO * yfs, TSK_OFF_T maxBlocksToTest){
         free(spareBuffer);
         return TSK_ERR;
     }
+#endif
 
     // Initialize the pointers to one of the configurations we've seen (thought these defaults should not get used)
     yfs->spare_seq_offset = 0;
@@ -432,6 +449,7 @@ yaffsfs_read_header(YAFFSFS_INFO * yfs, YaffsHeader  &header,
     cnt = fs->img_read(offset, (char *) hdr, yfs->page_size);
     if (cnt == -1 || cnt < yfs->page_size) {
         free(hdr);
+        printf("Failed to read page\n");
         return 1;
     }
 
@@ -495,10 +513,13 @@ yaffsfs_read_spare(YAFFSFS_INFO * yfs, YaffsSpare &spare,
     if ((yfs->spare_seq_offset + 4 > yfs->spare_size) ||
         (yfs->spare_obj_id_offset + 4 > yfs->spare_size) ||
         (yfs->spare_chunk_id_offset + 4 > yfs->spare_size)) {
+        printf("%d %d %d\n", yfs->spare_seq_offset +4, yfs->spare_obj_id_offset +4, yfs->spare_chunk_id_offset +4);
+        printf("Error on spare sanity: spare size is %d\n", yfs->spare_size);
         return 1;
     }
 
     if ((spr = (unsigned char *) tsk_malloc(yfs->spare_size)) == NULL) {
+        printf("Error on spare malloc\n");
         return 1;
     }
 
@@ -508,8 +529,9 @@ yaffsfs_read_spare(YAFFSFS_INFO * yfs, YaffsSpare &spare,
         return 1;
     }
 
-    cnt = fs->img_read(offset, (char *) spr, yfs->spare_size);
-    if (cnt == -1 || cnt < yfs->spare_size) {
+    cnt = fs->img_read(offset, (char *) spr, 28);
+    if (cnt == -1) {
+        printf("error on spare read\n");
         // couldn't read sufficient bytes...
         //if (spare) {
             free(spr);
@@ -592,4 +614,9 @@ yaffsfs_read_chunk(YAFFSFS_INFO * yfs,
     }
 
     return 0;
+}
+
+bool yaffs_info_init(YAFFSFS_INFO& info){
+    yaffs_initialize_spare_format(&info, -1);
+    return true;
 }

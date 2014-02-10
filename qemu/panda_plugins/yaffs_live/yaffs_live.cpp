@@ -135,12 +135,18 @@ static uint32_t nand_dev_do_cmd(GoldfishNandDevice *s, uint32_t cmd)
         state.fs_info.img_write(addr,tmp, size);
         if(state.page_size == (addr % (state.page_size + state.spare_size))){
             YaffsSpare spare;
-            yaffsfs_read_spare(&state, spare, addr);
-            fprintf(writelog, "Wrote spare seq %#X obj %#X chunk %#X\n", spare.seq_number, spare.object_id, spare.chunk_id);
+            int ret = yaffsfs_read_spare(&state, spare, addr);
+            if(ret)
+                fprintf(writelog, "Error reading spare!\n");
+            else
+                fprintf(writelog, "Wrote spare seq %#X obj %#X chunk %#X\n", spare.seq_number, spare.object_id, spare.chunk_id);
         }else if(0 == (addr % (state.page_size + state.spare_size))){
             YaffsHeader header;
-            yaffsfs_read_header(&state, header, addr);
-            printYaffsHeader(writelog, header);
+            int ret = yaffsfs_read_header(&state, header, addr);
+            if(ret)
+                fprintf(writelog, "Error reading header!\n");
+            else
+                printYaffsHeader(writelog, header);
         }else{
 	  fprintf(writelog, "UNALIGNED WRITE!\n");
 	}
@@ -546,7 +552,7 @@ int on_dma(CPUState *env, uint32_t is_write, uint8_t* src_addr, uint64_t dest_ad
         mmc_current_buffer_address+=num_bytes;
     }else if(is_write && nand_dma_read_outstanding_bytes > 0 && cpu_single_env &&
         panda_virt_to_phys(cpu_single_env, nand_current_buffer_address) == dest_addr){
-        fprintf(writelog, "FILE READ\n");
+        fprintf(writelog, "FILE READ %d\n", num_bytes);
         fwrite(src_addr,1,num_bytes, writelog);
         fprintf(writelog, "\n");
         nand_dma_read_outstanding_bytes -= num_bytes;
@@ -555,12 +561,18 @@ int on_dma(CPUState *env, uint32_t is_write, uint8_t* src_addr, uint64_t dest_ad
         state.fs_info.img_write(nand_next_read_flash_address,src_addr, num_bytes);
         if(state.page_size == (nand_next_read_flash_address % (state.page_size + state.spare_size))){
             YaffsSpare spare;
-            yaffsfs_read_spare(&state, spare, nand_next_read_flash_address);
-            fprintf(writelog, "Read spare seq %#X obj %#X chunk %#X\n", spare.seq_number, spare.object_id, spare.chunk_id);
+            int ret = yaffsfs_read_spare(&state, spare, nand_next_read_flash_address);
+            if(ret)
+                fprintf(writelog, "Error reading spare!\n");
+            else
+                fprintf(writelog, "Read spare seq %#X obj %#X chunk %#X\n", spare.seq_number, spare.object_id, spare.chunk_id);
         }else if(0 == (nand_next_read_flash_address % (state.page_size + state.spare_size))){
             YaffsHeader header;
-            yaffsfs_read_header(&state, header, nand_next_read_flash_address);
-            printYaffsHeader(writelog, header);
+            int ret = yaffsfs_read_header(&state, header, nand_next_read_flash_address);
+            if(ret)
+                fprintf(writelog, "error reading header\n");
+            else
+                printYaffsHeader(writelog, header);
         }else{
 	  fprintf(writelog,"READ UNALIGNED!!! %#X\n", nand_next_read_flash_address);
 	}
@@ -603,6 +615,8 @@ bool init_plugin(void *self) {
     writelog = fopen("/scratch/writelog.txt","wb");
     sdcard_log = fopen("/scratch/sdcardlog.txt", "wb");
     
+    yaffs_info_init(state);
+    
     state.page_size = 2048;
     state.spare_size = 64;
 
@@ -618,9 +632,12 @@ void uninit_plugin(void *self) {
 }
 
 bool FS_Img::img_write(TSK_OFF_T offset, uint8_t* src_buff, size_t count){
+    fprintf(writelog, "Writing %d bytes at offset %#x\n", count, offset);
     bool largeEnough = this->ensure_capacity(offset+count);
     if (largeEnough)
         memcpy(this->buffer + offset, src_buff, count);
+    else
+        fprintf(writelog, "FAILED TO ALLOCATE %d bytes\n", count);
     return largeEnough;
 }
 
@@ -630,6 +647,7 @@ bool FS_Img::ensure_capacity(size_t size){
         if(!tmp) return false;
         this->buffer = static_cast<uint8_t*>(tmp);
         this->buffer_len = size;
+        fprintf(writelog, "Expanded buffer to %#X\n", size);
         return true;
     }else{
         return true;
