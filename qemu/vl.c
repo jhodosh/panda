@@ -3254,7 +3254,7 @@ int main(int argc, char **argv, char **envp)
     }
     loc_set_none();
 #if defined(CONFIG_ANDROID)
-    DS_init();
+    //DS_init();
 #endif
 
     // Now that all arguments are available, we can load plugins
