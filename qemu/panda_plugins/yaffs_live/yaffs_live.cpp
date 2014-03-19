@@ -15,6 +15,8 @@ PANDAENDCOMMENT */
 // the PRIx64 macro
 #define __STDC_FORMAT_MACROS
 
+//#define LIVE_FLASH_DEBUG
+
 extern "C" {
 
 #include "config.h"
@@ -68,8 +70,27 @@ static int mmc_dma_read_outstanding_sectors = 0;
 static uint32_t mmc_current_buffer_address = 0;
 YAFFSFS_INFO state;
 
+
+FILE* debug_log = nullptr;
+#ifdef LIVE_FLASH_DEBUG
+#define DLOG(...) xlog(__VA_ARGS__)
+#else
+#define DLOG(...) ((void)0)
+#endif
+
+static void
+xlog(FILE* file, const char*  format, ... )
+{
+    
+    va_list  args;
+    va_start(args, format);
+    vfprintf(file, format, args);
+    va_end(args);
+    
+}
+
 static void printYaffsHeader(FILE* file, YaffsHeader& header){
-    fprintf(file, "obj_type: %#X parent_id: %#X, name: %s, file_mode: %#X is_shrink: %#X inband_obj_id\n",
+    DLOG(file, "obj_type: %#X parent_id: %#X, name: %s, file_mode: %#X is_shrink: %#X inband_obj_id\n",
             header.obj_type, header.parent_id, header.name, header.is_shrink, header.inband_obj_id);
 }
 
@@ -78,7 +99,7 @@ static uint32_t nand_dev_do_cmd(GoldfishNandDevice *s, uint32_t cmd)
     uint32_t size;
     uint64_t addr;
     nand_dev *dev;
-    fprintf(writelog, "Doing command 0x%X on dev %d of %d \n", cmd, s->dev, s->nand_dev_count);
+    DLOG(debug_log, "Doing command 0x%X on dev %d of %d \n", cmd, s->dev, s->nand_dev_count);
     if (cmd == NAND_CMD_WRITE_BATCH || cmd == NAND_CMD_READ_BATCH ||
         cmd == NAND_CMD_ERASE_BATCH) {
         struct batch_data bd;
@@ -101,7 +122,7 @@ static uint32_t nand_dev_do_cmd(GoldfishNandDevice *s, uint32_t cmd)
     case NAND_CMD_GET_DEV_NAME:
         if(size > dev->devname_len)
             size = dev->devname_len;
-        fprintf(writelog, "got dev name %s\n", dev->devname);
+        DLOG(debug_log, "got dev name %s\n", dev->devname);
         //cpu_memory_rw(cpu_single_env, s->data, (uint8_t*)dev->devname, size, 1);
         return size;
     case NAND_CMD_READ_BATCH:
@@ -117,16 +138,16 @@ static uint32_t nand_dev_do_cmd(GoldfishNandDevice *s, uint32_t cmd)
         nand_current_buffer_address = s->data;
         nand_dma_read_outstanding_bytes = size;
         nand_next_read_flash_address = addr;
-        fprintf(writelog, "Read %d bytes at offset %#lX\n",size, addr);
+        DLOG(debug_log, "Read %d bytes at offset %#lX\n",size, addr);
         return size;
     case NAND_CMD_WRITE_BATCH:
     case NAND_CMD_WRITE:
       if(dev->flags & NAND_DEV_FLAG_READ_ONLY){
-	fprintf(writelog, "Tried to write to read only flash\n");
+	fprintf(stderr, "Tried to write to read only flash\n");
             return 0;
       }
       if(addr >= dev->max_size){
-	fprintf(writelog, "tried to write to address %#lx past end of flash at %#lx\n", addr, dev->max_size);
+	fprintf(stderr, "tried to write to address %#lx past end of flash at %#lx\n", addr, dev->max_size);
             return 0;
       }
         if(size > dev->max_size - addr)
@@ -141,18 +162,20 @@ static uint32_t nand_dev_do_cmd(GoldfishNandDevice *s, uint32_t cmd)
             YaffsSpare spare;
             int ret = yaffsfs_read_spare(&state, spare, addr);
             if(ret)
-                fprintf(writelog, "Error reading spare!\n");
-            else
-                fprintf(writelog, "Wrote spare seq %#X obj %#X chunk %#X\n", spare.seq_number, spare.object_id, spare.chunk_id);
+                fprintf(stderr, "Error reading spare!\n");
+            else{
+                DLOG(debug_log, "Wrote spare seq %#X obj %#X chunk %#X\n", spare.seq_number, spare.object_id, spare.chunk_id);
+            }
         }else if(0 == (addr % (state.page_size + state.spare_size))){
             YaffsHeader header;
             int ret = yaffsfs_read_header(&state, header, addr);
             if(ret)
-                fprintf(writelog, "Error reading header!\n");
-            else
-                printYaffsHeader(writelog, header);
+                fprintf(stderr, "Error reading header!\n");
+            else{
+                printYaffsHeader(debug_log, header);
+            }
         }else{
-	  fprintf(writelog, "UNALIGNED WRITE!\n");
+	  fprintf(stderr, "UNALIGNED WRITE!\n");
 	}
         fwrite(tmp, 1, size,  writelog);
         return size;
@@ -166,7 +189,7 @@ static uint32_t nand_dev_do_cmd(GoldfishNandDevice *s, uint32_t cmd)
             size = dev->max_size - addr;
 
             //return nand_dev_erase_file(dev, addr, size);
-        fprintf(writelog, "Erased %d bytes at offset %#lX\n", size, addr);
+        DLOG(debug_log, "Erased %d bytes at offset %#lX\n", size, addr);
         //memset(&dev->data[addr], 0xff, size);
         return size;
     case NAND_CMD_BLOCK_BAD_GET: // no bad block support
@@ -298,7 +321,7 @@ static void goldfish_mmc_do_command(struct GoldfishMmcDevice *s, uint32_t cmd, u
             new_status |= MMC_STAT_END_OF_DATA;
             mmc_dma_read_outstanding_sectors = s->block_count;
             mmc_current_buffer_address = s->buffer_address;
-            fprintf(sdcard_log, "Reading %d sectors from SD\n", s->block_count);
+            DLOG(debug_log, "Reading %d sectors from SD\n", s->block_count);
             s->resp[0] = SET_R1_CURRENT_STATE(4) | R1_READY_FOR_DATA; // 2304
             break;
         }
@@ -613,9 +636,10 @@ int on_dma(CPUState *env, uint32_t is_write, uint8_t* src_addr, uint64_t dest_ad
             YaffsSpare spare;
             int ret = yaffsfs_read_spare(&state, spare, nand_next_read_flash_address);
             if(ret)
-                fprintf(writelog, "Error reading spare!\n");
-            else
-                fprintf(writelog, "Read spare seq %#X obj %#X chunk %#X\n", spare.seq_number, spare.object_id, spare.chunk_id);
+                fprintf(stderr, "Error reading spare!\n");
+            else{
+                DLOG(debug_log, "Read spare seq %#X obj %#X chunk %#X\n", spare.seq_number, spare.object_id, spare.chunk_id);
+            }
         }else if(0 == (nand_next_read_flash_address % (state.page_size + state.spare_size)) ||
             1024 == (nand_next_read_flash_address % (state.page_size + state.spare_size))
         ){
@@ -627,15 +651,16 @@ int on_dma(CPUState *env, uint32_t is_write, uint8_t* src_addr, uint64_t dest_ad
                 YaffsHeader header;
                 int ret = yaffsfs_read_header(&state, header, nand_next_read_flash_address - 1024);
                 if(ret)
-                    fprintf(writelog, "error reading header\n");
-                else
-                    printYaffsHeader(writelog, header);
+                    fprintf(stderr, "error reading header\n");
+                else{
+                    printYaffsHeader(debug_log, header);
+                }
                 last_aligned_target = 0;
             } else {
                 last_aligned_target = nand_next_read_flash_address;
             }
         }else{
-	  fprintf(writelog,"READ UNALIGNED!!! %#X\n", nand_next_read_flash_address);
+	  fprintf(stderr,"READ UNALIGNED!!! %#X\n", nand_next_read_flash_address);
 	}
         nand_next_read_flash_address += num_bytes;
     }
@@ -681,6 +706,11 @@ bool init_plugin(void *self) {
     state.page_size = 2048;
     state.spare_size = 64;
 
+#ifdef LIVE_FLASH_DEBUG
+    debug_log = fopen("/scratch/debuglog.txt");
+    if(!debug_log) return false;
+#endif
+    
     return true;
 }
 
@@ -693,12 +723,12 @@ void uninit_plugin(void *self) {
 }
 
 bool FS_Img::img_write(TSK_OFF_T offset, uint8_t* src_buff, size_t count){
-    fprintf(writelog, "Writing %d bytes at offset %#x\n", count, offset);
+    DLOG(debug_log, "Writing %d bytes at offset %#x\n", count, offset);
     bool largeEnough = this->ensure_capacity(offset+count);
     if (largeEnough)
         memcpy(this->buffer + offset, src_buff, count);
     else
-        fprintf(writelog, "FAILED TO ALLOCATE %d bytes\n", count);
+        fprintf(stderr, "FAILED TO ALLOCATE %d bytes\n", count);
     return largeEnough;
 }
 
@@ -708,7 +738,7 @@ bool FS_Img::ensure_capacity(size_t size){
         if(!tmp) return false;
         this->buffer = static_cast<uint8_t*>(tmp);
         this->buffer_len = size;
-        fprintf(writelog, "Expanded buffer to %#X\n", size);
+        DLOG(debug_log, "Expanded buffer to %#X\n", size);
         return true;
     }else{
         return true;
