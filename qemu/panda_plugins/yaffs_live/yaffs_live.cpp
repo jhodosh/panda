@@ -59,6 +59,10 @@ static const uint32_t MMC_LOCATION = 0xff005000;
 static const uint32_t NAND_LOCATION = 0xff016000;
 FILE* writelog;
 FILE* sdcard_log;
+static int nand_dma_read_outstanding_bytes = 0;
+static uint32_t nand_current_buffer_address = 0;
+static int mmc_dma_read_outstanding_sectors = 0;
+static uint32_t mmc_current_buffer_address = 0;
 
 static uint32_t nand_dev_do_cmd(GoldfishNandDevice *s, uint32_t cmd)
 {
@@ -101,6 +105,8 @@ static uint32_t nand_dev_do_cmd(GoldfishNandDevice *s, uint32_t cmd)
 //            return nand_dev_read_file(dev, s->data, addr, size);
 
   //      cpu_memory_rw(cpu_single_env,s->data, &dev->data[addr], size, 1);
+        nand_current_buffer_address = s->data;
+        nand_dma_read_outstanding_bytes = size;
         fprintf(writelog, "Read %d bytes at offset %#lX\n",size, addr);
         return size;
     case NAND_CMD_WRITE_BATCH:
@@ -258,6 +264,9 @@ static void goldfish_mmc_do_command(struct GoldfishMmcDevice *s, uint32_t cmd, u
             }
             //result = goldfish_mmc_bdrv_read(s, arg, s->buffer_address, s->block_count);
             new_status |= MMC_STAT_END_OF_DATA;
+            mmc_dma_read_outstanding_sectors = s->block_count;
+            mmc_current_buffer_address = s->buffer_address;
+            fprintf(sdcard_log, "Reading %d sectors from SD\n", s->block_count);
             s->resp[0] = SET_R1_CURRENT_STATE(4) | R1_READY_FOR_DATA; // 2304
             break;
         }
@@ -505,6 +514,23 @@ int before_loadvm(void){
     return 0;
 }
 
+
+int on_dma(CPUState *env, uint32_t is_write, uint8_t* src_addr, uint64_t dest_addr, uint32_t num_bytes){
+    if(is_write && mmc_dma_read_outstanding_sectors > 0 && dest_addr == mmc_current_buffer_address){
+        fprintf(sdcard_log, "FILE READ\n");
+        fwrite(src_addr,1,num_bytes, sdcard_log);
+        fprintf(sdcard_log, "\n");
+        mmc_dma_read_outstanding_sectors -= 1;
+        mmc_current_buffer_address+=num_bytes;
+    }else if(is_write && nand_dma_read_outstanding_bytes > 0 && cpu_single_env &&
+        panda_virt_to_phys(cpu_single_env, nand_current_buffer_address) == dest_addr){
+        fprintf(writelog, "FILE READ\n");
+        fwrite(src_addr,1,num_bytes, writelog);
+        fprintf(writelog, "\n");
+        nand_dma_read_outstanding_bytes -= num_bytes;
+        nand_current_buffer_address += num_bytes;
+    }
+}
 bool init_plugin(void *self) {
     panda_cb pcb;
 
@@ -534,6 +560,9 @@ bool init_plugin(void *self) {
 
     pcb.phys_mem_read = mem_read_callback;
     panda_register_callback(self, PANDA_CB_PHYS_MEM_READ, pcb);
+    
+    pcb.replay_before_cpu_physical_mem_rw_ram = on_dma;
+    panda_register_callback(self, PANDA_CB_REPLAY_BEFORE_CPU_PHYSICAL_MEM_RW_RAM, pcb);
 
     writelog = fopen("/scratch/writelog.txt","wb");
     sdcard_log = fopen("/scratch/sdcardlog.txt", "wb");
