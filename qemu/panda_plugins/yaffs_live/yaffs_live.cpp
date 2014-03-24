@@ -43,6 +43,8 @@ extern "C" {
 
 #include "tsk_yaffs.h"
 
+#include "storagelog.hpp"
+
 // These need to be extern "C" so that the ABI is compatible with
 // QEMU/PANDA, which is written in C
 extern "C" {
@@ -61,8 +63,8 @@ GoldfishMmcDevice  __GoldfishMmcDevice;
 
 static const uint32_t MMC_LOCATION = 0xff005000;
 static const uint32_t NAND_LOCATION = 0xff016000;
-FILE* writelog;
-FILE* sdcard_log;
+LogWriter* nand_log;
+LogWriter* sdcard_log;
 static int nand_dma_read_outstanding_bytes = 0;
 static uint32_t nand_current_buffer_address = 0;
 static uint32_t nand_next_read_flash_address;
@@ -155,10 +157,12 @@ static uint32_t nand_dev_do_cmd(GoldfishNandDevice *s, uint32_t cmd)
             size = dev->max_size - addr;
 
 //            return nand_dev_write_file(dev, s->data, addr, size);
-        fprintf(writelog, "Wrote %d bytes at offset %#lX\n", size, addr);
+        DLOG(debug_log, "Wrote %d bytes at offset %#lX\n", size, addr);
         uint8_t tmp[size];
         cpu_memory_rw_debug(cpu_single_env,s->data, tmp, size, 0);
         state.fs_info.img_write(addr,tmp, size);
+        Metadata metadata;
+        metadata.type=MetadataType::NO_METADATA;
         if(state.page_size == (addr % (state.page_size + state.spare_size))){
             YaffsSpare spare;
             int ret = yaffsfs_read_spare(&state, spare, addr);
@@ -166,6 +170,9 @@ static uint32_t nand_dev_do_cmd(GoldfishNandDevice *s, uint32_t cmd)
                 fprintf(stderr, "Error reading spare!\n");
             else{
                 DLOG(debug_log, "Wrote spare seq %#X obj %#X chunk %#X\n", spare.seq_number, spare.object_id, spare.chunk_id);
+                metadata.type=MetadataType::YAFFSSPARE;
+                metadata.yaffsspare = &spare;
+                nand_log->wroteSector(addr, tmp, size, metadata);
             }
         }else if(0 == (addr % (state.page_size + state.spare_size))){
             YaffsHeader header;
@@ -174,11 +181,15 @@ static uint32_t nand_dev_do_cmd(GoldfishNandDevice *s, uint32_t cmd)
                 fprintf(stderr, "Error reading header!\n");
             else{
                 printYaffsHeader(debug_log, header);
+                metadata.type=MetadataType::YAFFSHEADER;
+                metadata.yaffsheader=&header;
+                nand_log->wroteSector(addr, tmp, size, metadata);
             }
         }else{
+          nand_log->wroteSector(addr, tmp, size, metadata);
 	  fprintf(stderr, "UNALIGNED WRITE!\n");
 	}
-        fwrite(tmp, 1, size,  writelog);
+        //fwrite(tmp, 1, size,  writelog);
         return size;
     case NAND_CMD_ERASE_BATCH:
     case NAND_CMD_ERASE:
@@ -191,6 +202,7 @@ static uint32_t nand_dev_do_cmd(GoldfishNandDevice *s, uint32_t cmd)
 
             //return nand_dev_erase_file(dev, addr, size);
         DLOG(debug_log, "Erased %d bytes at offset %#lX\n", size, addr);
+        nand_log->erasedSector(addr, size);
         //memset(&dev->data[addr], 0xff, size);
         return size;
     case NAND_CMD_BLOCK_BAD_GET: // no bad block support
@@ -219,8 +231,11 @@ static int  goldfish_mmc_bdrv_write(struct GoldfishMmcDevice *s,
         //ret = bdrv_write(s->bs, sector_number, s->buf, 1);
         //if (ret < 0)
         //    return ret;
-        fprintf(sdcard_log, "Wrote to SDcard sector %#lX\n", sector_number);
-        fwrite(buf, 1, 512, sdcard_log);
+        DLOG(debug_log, "Wrote to SDcard sector %#lX\n", sector_number);
+        Metadata metadata;
+        metadata.type = MetadataType::NO_METADATA;
+        sdcard_log->wroteSector(sector_number,buf, 512, metadata);
+        //fwrite(buf, 1, 512, sdcard_log);
 
         dst_address   += 512;
         num_sectors   -= 1;
@@ -619,22 +634,27 @@ int on_dma(CPUState *env, uint32_t is_write, uint8_t* src_addr, uint64_t dest_ad
     /* QEMU will break up DMA into multiple chunks, because the guest's physical memory is not contiguous
        in QEMU's virtual memory. */
     if(is_write && mmc_dma_read_outstanding_sectors > 0 && dest_addr == mmc_current_buffer_address){
-        fprintf(sdcard_log, "FILE READ\n");
-        fwrite(src_addr,1,num_bytes, sdcard_log);
-        fprintf(sdcard_log, "\n");
+        DLOG(debug_log, "FILE READ\n");
+        //TODO are we really sure that these are always exactly 512 byte DMAs?
+        //fwrite(src_addr,1,num_bytes, sdcard_log);
+        Metadata metadata;
+        metadata.type = MetadataType::NO_METADATA;
+        sdcard_log->readSector(mmc_dma_read_next_block, src_addr, num_bytes, metadata);
+        //fprintf(sdcard_log, "\n");
         mmc_dma_read_outstanding_sectors -= 1;
         mmc_current_buffer_address+=num_bytes;
         mmc_dma_read_next_block+= 1;
     }else if(is_write && nand_dma_read_outstanding_bytes > 0 && cpu_single_env &&
         panda_virt_to_phys(cpu_single_env, nand_current_buffer_address) == dest_addr){
-        fprintf(writelog, "FILE READ %d\n", num_bytes);
-        fwrite(src_addr,1,num_bytes, writelog);
-        fprintf(writelog, "\n");
+        DLOG(debug_log, "FILE READ %d\n", num_bytes);
+        //fwrite(src_addr,1,num_bytes, writelog);
+        //fprintf(writelog, "\n");
         nand_dma_read_outstanding_bytes -= num_bytes;
         nand_current_buffer_address += num_bytes;
     
         state.fs_info.img_write(nand_next_read_flash_address,src_addr, num_bytes);
-
+        Metadata metadata;
+        metadata.type = MetadataType::NO_METADATA;
         if(state.page_size == (nand_next_read_flash_address % (state.page_size + state.spare_size))){
             YaffsSpare spare;
             int ret = yaffsfs_read_spare(&state, spare, nand_next_read_flash_address);
@@ -642,6 +662,9 @@ int on_dma(CPUState *env, uint32_t is_write, uint8_t* src_addr, uint64_t dest_ad
                 fprintf(stderr, "Error reading spare!\n");
             else{
                 DLOG(debug_log, "Read spare seq %#X obj %#X chunk %#X\n", spare.seq_number, spare.object_id, spare.chunk_id);
+                metadata.type = MetadataType::YAFFSSPARE;
+                metadata.yaffsspare = &spare;
+                nand_log->readSector(nand_next_read_flash_address, src_addr, num_bytes, metadata);
             }
         }else if(0 == (nand_next_read_flash_address % (state.page_size + state.spare_size)) ||
             1024 == (nand_next_read_flash_address % (state.page_size + state.spare_size))
@@ -657,12 +680,16 @@ int on_dma(CPUState *env, uint32_t is_write, uint8_t* src_addr, uint64_t dest_ad
                     fprintf(stderr, "error reading header\n");
                 else{
                     printYaffsHeader(debug_log, header);
+                    metadata.type = MetadataType::YAFFSHEADER;
+                    metadata.yaffsheader = &header;
+                    nand_log->readSector(nand_next_read_flash_address, src_addr, num_bytes, metadata);
                 }
                 last_aligned_target = 0;
             } else {
                 last_aligned_target = nand_next_read_flash_address;
             }
         }else{
+          nand_log->readSector(nand_next_read_flash_address, src_addr, num_bytes, metadata);
 	  fprintf(stderr,"READ UNALIGNED!!! %#X\n", nand_next_read_flash_address);
 	}
         nand_next_read_flash_address += num_bytes;
@@ -673,9 +700,6 @@ bool init_plugin(void *self) {
 
     printf("Initializing plugin yaffs_live\n");
 
-    
-    writelog = nullptr;
-    sdcard_log = nullptr;
     
     
     //std::unique_ptr<FILE, unique_file_deleter> nandstate(fopen(vmstatefile,"r"));
@@ -701,9 +725,12 @@ bool init_plugin(void *self) {
     pcb.replay_before_cpu_physical_mem_rw_ram = on_dma;
     panda_register_callback(self, PANDA_CB_REPLAY_BEFORE_CPU_PHYSICAL_MEM_RW_RAM, pcb);
 
-    writelog = fopen("/scratch/writelog.txt","wb");
-    sdcard_log = fopen("/scratch/sdcardlog.txt", "wb");
-    
+    nand_log = new LogWriter("/scratch/writelog");
+    sdcard_log = new LogWriter("/scratch/sdcardlog");
+    if(!nand_log || !sdcard_log ||
+       !nand_log->ready() || ! sdcard_log->ready()){
+        return false;
+    }
     yaffs_info_init(state);
     
     state.page_size = 2048;
@@ -718,11 +745,8 @@ bool init_plugin(void *self) {
 }
 
 void uninit_plugin(void *self) {
-
-    if(writelog)
-        fclose(writelog);
-    if(sdcard_log)
-        fclose(sdcard_log);
+    delete nand_log;
+    delete sdcard_log;
 }
 
 bool FS_Img::img_write(TSK_OFF_T offset, uint8_t* src_buff, size_t count){
