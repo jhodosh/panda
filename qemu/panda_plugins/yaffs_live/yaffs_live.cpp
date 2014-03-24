@@ -67,6 +67,7 @@ static int nand_dma_read_outstanding_bytes = 0;
 static uint32_t nand_current_buffer_address = 0;
 static uint32_t nand_next_read_flash_address;
 static int mmc_dma_read_outstanding_sectors = 0;
+static uint32_t mmc_dma_read_next_block = 0;
 static uint32_t mmc_current_buffer_address = 0;
 YAFFSFS_INFO state;
 
@@ -320,6 +321,7 @@ static void goldfish_mmc_do_command(struct GoldfishMmcDevice *s, uint32_t cmd, u
             //result = goldfish_mmc_bdrv_read(s, arg, s->buffer_address, s->block_count);
             new_status |= MMC_STAT_END_OF_DATA;
             mmc_dma_read_outstanding_sectors = s->block_count;
+            mmc_dma_read_next_block = arg;
             mmc_current_buffer_address = s->buffer_address;
             DLOG(debug_log, "Reading %d sectors from SD\n", s->block_count);
             s->resp[0] = SET_R1_CURRENT_STATE(4) | R1_READY_FOR_DATA; // 2304
@@ -622,6 +624,7 @@ int on_dma(CPUState *env, uint32_t is_write, uint8_t* src_addr, uint64_t dest_ad
         fprintf(sdcard_log, "\n");
         mmc_dma_read_outstanding_sectors -= 1;
         mmc_current_buffer_address+=num_bytes;
+        mmc_dma_read_next_block+= 1;
     }else if(is_write && nand_dma_read_outstanding_bytes > 0 && cpu_single_env &&
         panda_virt_to_phys(cpu_single_env, nand_current_buffer_address) == dest_addr){
         fprintf(writelog, "FILE READ %d\n", num_bytes);
