@@ -897,6 +897,11 @@ void nand_add_dev(GoldfishNandDevice* s, const char *arg)
 
     s->nand_dev_count++;
 
+    D("index = %d\n", s->nand_dev_count -1);
+    D("Devname = %s\n", dev->devname);
+    D("namelen = %d\n", dev->devname_len);
+    D("Flags = 0x%X page = 0x%X extra = 0x%X erase = 0x%X max = 0x%X\n", dev->flags, dev->page_size, dev->extra_size, dev->erase_size, dev->max_size);
+    
     return;
 
 out_of_memory:
