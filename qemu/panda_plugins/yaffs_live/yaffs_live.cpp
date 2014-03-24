@@ -78,7 +78,7 @@ static uint32_t nand_dev_do_cmd(GoldfishNandDevice *s, uint32_t cmd)
     uint32_t size;
     uint64_t addr;
     nand_dev *dev;
-    fprintf(writelog, "Doing command 0x%X\n", cmd);
+    fprintf(writelog, "Doing command 0x%X on dev %d of %d \n", cmd, s->dev, s->nand_dev_count);
     if (cmd == NAND_CMD_WRITE_BATCH || cmd == NAND_CMD_READ_BATCH ||
         cmd == NAND_CMD_ERASE_BATCH) {
         struct batch_data bd;
@@ -121,10 +121,14 @@ static uint32_t nand_dev_do_cmd(GoldfishNandDevice *s, uint32_t cmd)
         return size;
     case NAND_CMD_WRITE_BATCH:
     case NAND_CMD_WRITE:
-        if(dev->flags & NAND_DEV_FLAG_READ_ONLY)
+      if(dev->flags & NAND_DEV_FLAG_READ_ONLY){
+	fprintf(writelog, "Tried to write to read only flash\n");
             return 0;
-        if(addr >= dev->max_size)
+      }
+      if(addr >= dev->max_size){
+	fprintf(writelog, "tried to write to address %#lx past end of flash at %#lx\n", addr, dev->max_size);
             return 0;
+      }
         if(size > dev->max_size - addr)
             size = dev->max_size - addr;
 
@@ -539,6 +543,9 @@ int before_loadvm(void){
     
     vmstate_register(nullptr,0,nand_vmsd,&__GoldfishNandDevice);
     vmstate_register(nullptr,0,mmc_vmsd,&__GoldfishMmcDevice);
+
+    printf("NAND device 0 devname is at %#lx devname_len is at %#lx\n", &__GoldfishNandDevice.nand_devs[0].devname, &__GoldfishNandDevice.nand_devs[0].devname_len);
+    printf("NAND device 0 flags is at %#lx\n", &__GoldfishNandDevice.nand_devs[0].flags);
     return 0;
 }
 
@@ -562,8 +569,28 @@ static bool golfish_nand_specific_yaffs_dma(
     return false;
 }
 
+static void print_nand(void){
+  for(int index =0; index < __GoldfishNandDevice.nand_dev_count; index++){
+    char* name =__GoldfishNandDevice.nand_devs[index].devname;
+    //    __GoldfishNandDevice.nand_devs[index].devname_len;
+    uint32_t flagts = __GoldfishNandDevice.nand_devs[index].flags;
+    uint32_t page_zie = __GoldfishNandDevice.nand_devs[index].page_size;
+    uint32_t extra = __GoldfishNandDevice.nand_devs[index].extra_size;
+    uint32_t erase = __GoldfishNandDevice.nand_devs[index].erase_size;
+    uint32_t max = __GoldfishNandDevice.nand_devs[index].max_size;
+    printf("%d: %s flags %#x page %#X extra %#X erase %#x max %#x\n", index, name, flagts, page_zie, extra, erase, max);
+  }
+}
+static bool first_dma = true;
+
 static target_phys_addr_t last_aligned_target = 0;
 int on_dma(CPUState *env, uint32_t is_write, uint8_t* src_addr, uint64_t dest_addr, uint32_t num_bytes){
+  if(unlikely(first_dma)){
+    printf("%#x %#x\n", sizeof(__GoldfishNandDevice), sizeof(__GoldfishNandDevice.nand_devs[0]));
+    print_nand();
+    first_dma = false;
+  }
+
     /* QEMU will break up DMA into multiple chunks, because the guest's physical memory is not contiguous
        in QEMU's virtual memory. */
     if(is_write && mmc_dma_read_outstanding_sectors > 0 && dest_addr == mmc_current_buffer_address){
@@ -581,6 +608,7 @@ int on_dma(CPUState *env, uint32_t is_write, uint8_t* src_addr, uint64_t dest_ad
         nand_current_buffer_address += num_bytes;
     
         state.fs_info.img_write(nand_next_read_flash_address,src_addr, num_bytes);
+
         if(state.page_size == (nand_next_read_flash_address % (state.page_size + state.spare_size))){
             YaffsSpare spare;
             int ret = yaffsfs_read_spare(&state, spare, nand_next_read_flash_address);
@@ -591,11 +619,13 @@ int on_dma(CPUState *env, uint32_t is_write, uint8_t* src_addr, uint64_t dest_ad
         }else if(0 == (nand_next_read_flash_address % (state.page_size + state.spare_size)) ||
             1024 == (nand_next_read_flash_address % (state.page_size + state.spare_size))
         ){
+	uint32_t offset = (nand_next_read_flash_address % (state.page_size + state.spare_size));
             //bool pageReady = golfish_nand_specific_yaffs_dma(last_aligned_target, num_bytes, nand_next_read_flash_address);
             bool pageReady = last_aligned_target != 0;
+	    pageReady = (offset == 1024);
             if(pageReady){
                 YaffsHeader header;
-                int ret = yaffsfs_read_header(&state, header, last_aligned_target);
+                int ret = yaffsfs_read_header(&state, header, nand_next_read_flash_address - 1024);
                 if(ret)
                     fprintf(writelog, "error reading header\n");
                 else
