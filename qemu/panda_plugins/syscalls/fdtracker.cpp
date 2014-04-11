@@ -23,7 +23,10 @@ PANDAENDCOMMENT */
 
 #include <map>
 #include <string>
-#include <hw/elf_ops.h>
+#include "weak_callbacks.hpp"
+#include "syscalls.hpp"
+
+const target_ulong NULL_FD = 0;
 
 using namespace std;
 
@@ -32,18 +35,64 @@ typedef map<int, string> fdmap;
 
 map<target_ulong, fdmap> asid_to_fds;
 
+struct OpenCallbackData : CallbackData {
+    string path;
+    target_ulong base_fd;
+};
+
+static target_ulong calc_retaddr(CPUState* env, target_ulong pc){
+#if defined(TARGET_ARM)
+    // Normal syscalls: return addr is stored in LR
+    return env->regs[14];
+    // Fork, exec
+    uint8_t offset = 0;
+    if(env->thumb == 0){
+        offset = 4;
+    } else {
+        offset = 2;
+    }
+    return pc + offset;
+#elif defined(TARGET_I386)
+    
+#else
+    
+#endif
+}
+
 //mkdirs
 
 //opens
-void do_open(CPUState *env, target_ulong pc, target_ulong str_ptr){
-    int fd = wait_return();
-    fdmap[get_current_asid()][fd] = get_string(env, str_ptr);
+
+static void open_callback(CallbackData* opaque, CPUState* env, target_asid asid){
+    OpenCallbackData* data = dynamic_cast<OpenCallbackData*>(opaque);
+    if(!data){
+        fprintf(stderr, "oops\n");
+        return;
+    }
+    string dirname = "";
+    auto& mymap = asid_to_fds[asid];
+    
+    if(NULL_FD != data->base_fd){
+        dirname += mymap[data->base_fd];
+    }
+    dirname += "/" + data->path;
+    mymap[get_return_val(env)] = dirname;
 }
 
-void do_openat(CPUState *env, target_ulong pc, uint32_t dfd, target_ulong str_ptr){
-    int fd = wait_return();
+void do_open(CPUState *env, target_ulong pc, std::string filename,uint32_t flags,uint32_t mode){
+    OpenCallbackData* data = new OpenCallbackData;
+    data->path = filename;
+    data->base_fd = NULL_FD;
+    ReturnPoint(calc_retaddr(env, pc), get_asid(env, pc), data, open_callback);
+
+}
+
+void do_openat(CPUState* env,target_ulong pc,uint32_t dfd,std::string filename,uint32_t flags,uint32_t mode){
+    OpenCallbackData* data = new OpenCallbackData;
+    data->path = filename;
+    data->base_fd = dfd;
+    ReturnPoint(calc_retaddr(env, pc), get_asid(env, pc), data, open_callback);
     
-    fdmap[get_current_asid()][fd] = get_string(env, str_ptr);
 }
 
 // dups

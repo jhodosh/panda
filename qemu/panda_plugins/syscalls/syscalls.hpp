@@ -4,7 +4,10 @@
 #include <functional>
 #include <memory>
 
+typedef target_ulong target_asid;
 
+inline target_asid get_asid(CPUState *env, target_ulong addr);
+inline target_ulong get_return_val(CPUState *env);
 
 struct CallbackData {
     
@@ -37,5 +40,6 @@ struct ReturnPoint {
     std::function<void(CallbackData*, CPUState*, target_asid)> callback;
 };
 
+void appendReturnPoint(ReturnPoint& rp);
 
 #endif
