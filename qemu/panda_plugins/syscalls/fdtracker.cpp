@@ -83,15 +83,14 @@ void do_open(CPUState *env, target_ulong pc, std::string filename,uint32_t flags
     OpenCallbackData* data = new OpenCallbackData;
     data->path = filename;
     data->base_fd = NULL_FD;
-    ReturnPoint(calc_retaddr(env, pc), get_asid(env, pc), data, open_callback);
-
+    appendReturnPoint(ReturnPoint(calc_retaddr(env, pc), get_asid(env, pc), data, open_callback));
 }
 
 void do_openat(CPUState* env,target_ulong pc,uint32_t dfd,std::string filename,uint32_t flags,uint32_t mode){
     OpenCallbackData* data = new OpenCallbackData;
     data->path = filename;
     data->base_fd = dfd;
-    ReturnPoint(calc_retaddr(env, pc), get_asid(env, pc), data, open_callback);
+    appendReturnPoint(calc_retaddr(env, pc), get_asid(env, pc), data, open_callback));
     
 }
 
