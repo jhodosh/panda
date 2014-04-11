@@ -35,7 +35,7 @@ typedef map<int, string> fdmap;
 
 map<target_ulong, fdmap> asid_to_fds;
 
-struct OpenCallbackData : CallbackData {
+class OpenCallbackData : CallbackData {
     string path;
     target_ulong base_fd;
 };
