@@ -125,7 +125,7 @@ static void dup_callback(CallbackData* opaque, CPUState* env, target_asid asid){
     }else{
         new_fd = get_return_val(env);
     }
-    asid_to_fds[asid][new_fd] = asid_to_fds[asid][old_fd];
+    asid_to_fds[asid][new_fd] = asid_to_fds[asid][data->old_fd];
 }
 
 // dups
