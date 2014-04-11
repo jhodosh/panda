@@ -1,3 +1,4 @@
+
 #include "weak_callbacks.hpp"
 extern "C"{
 #include "qemu-common.h"

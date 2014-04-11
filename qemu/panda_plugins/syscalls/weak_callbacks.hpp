@@ -1,4 +1,5 @@
 
+#include <string>
 
 // weak-defined default empty callbacks for all syscalls
 void __attribute__((weak)) call_sys_restart_syscall_callback(CPUState* env,target_ulong pc);
