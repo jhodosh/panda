@@ -68,6 +68,7 @@ static target_ulong calc_retaddr(CPUState* env, target_ulong pc){
 }
 
 static void open_callback(CallbackData* opaque, CPUState* env, target_asid asid){
+    printf("open callback\n");
     OpenCallbackData* data = dynamic_cast<OpenCallbackData*>(opaque);
     if(!data){
         fprintf(stderr, "oops\n");
@@ -100,6 +101,7 @@ void call_sys_mkdir_callback(CPUState* env,target_ulong pc,std::string pathname,
 //opens
 
 void call_sys_open_callback(CPUState *env, target_ulong pc, std::string filename,uint32_t flags,uint32_t mode){
+    printf("open\n");
     OpenCallbackData* data = new OpenCallbackData;
     data->path = filename;
     data->base_fd = NULL_FD;
@@ -107,6 +109,7 @@ void call_sys_open_callback(CPUState *env, target_ulong pc, std::string filename
 }
 
 void call_sys_openat_callback(CPUState* env,target_ulong pc,uint32_t dfd,std::string filename,uint32_t flags,uint32_t mode){
+    printf("openat\n");
     OpenCallbackData* data = new OpenCallbackData;
     data->path = filename;
     data->base_fd = dfd;
@@ -114,6 +117,7 @@ void call_sys_openat_callback(CPUState* env,target_ulong pc,uint32_t dfd,std::st
 }
 
 static void dup_callback(CallbackData* opaque, CPUState* env, target_asid asid){
+    printf("dup callback\n");
     DupCallbackData* data = dynamic_cast<DupCallbackData*>(opaque);
     if(!data){
         fprintf(stderr, "oops\n");
