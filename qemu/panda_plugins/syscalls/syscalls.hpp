@@ -6,8 +6,8 @@
 
 typedef target_ulong target_asid;
 
-inline target_asid get_asid(CPUState *env, target_ulong addr);
-inline target_ulong get_return_val(CPUState *env);
+target_asid get_asid(CPUState *env, target_ulong addr);
+target_ulong get_return_val(CPUState *env);
 
 class CallbackData {
 public:
