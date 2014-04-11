@@ -352,7 +352,6 @@ bool init_plugin(void *self) {
         fprintf(stderr, "Couldn't open /scratch/syscalls.txt. Abort.\n");
         return false;
     }
-    else return true;
 
 // Don't bother if we're not on x86
 #if  defined(TARGET_I386) || defined(TARGET_ARM)
@@ -366,6 +365,7 @@ bool init_plugin(void *self) {
     panda_register_callback(self, PANDA_CB_BEFORE_BLOCK_EXEC, pcb);
 #endif
 
+    return true;
 }
 
 void uninit_plugin(void *self) {
