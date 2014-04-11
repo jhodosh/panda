@@ -100,7 +100,7 @@ class Argument(object):
             newname = newname[:-2]
         self._name = newname
 
-callback_defs = []
+callback_defs = set()
 # Goldfish kernel doesn't support OABI layer. Yay!
 with open("android_arm_prototypes.txt") as armcalls:
     linere = re.compile("(\d+) (.+) (\w+)\((.*)\);")
@@ -180,7 +180,7 @@ with open("android_arm_prototypes.txt") as armcalls:
         # call the callback
         alltext += callback_call+'\n'
         #remember to define a weak symbol for the callback later
-        callback_defs.append(callback_def)
+        callback_defs.add(callback_def)
             
         alltext += "finish_syscall();"+'\n'
         alltext += "}; break;"+'\n'
