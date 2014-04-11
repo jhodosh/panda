@@ -67,7 +67,7 @@ static uint32_t arm_get_vaddr_table(CPUState *env, uint32_t address)
 }
 #endif
 
-inline target_asid get_asid(CPUState *env, target_ulong addr) {
+target_asid get_asid(CPUState *env, target_ulong addr) {
 #if defined(TARGET_I386)
     return env->cr[3];
 #elif defined(TARGET_ARM)
@@ -77,7 +77,7 @@ inline target_asid get_asid(CPUState *env, target_ulong addr) {
 #endif
 }
 
-inline target_ulong get_return_val(CPUState *env){
+target_ulong get_return_val(CPUState *env){
 #if defined(TARGET_I386)   
     return env->regs[R_EAX];
 #elif defined(TARGET_ARM)
