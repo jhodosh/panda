@@ -97,7 +97,7 @@ void call_sys_openat_callback(CPUState* env,target_ulong pc,uint32_t dfd,std::st
     OpenCallbackData* data = new OpenCallbackData;
     data->path = filename;
     data->base_fd = dfd;
-    appendReturnPoint(calc_retaddr(env, pc), get_asid(env, pc), data, open_callback));
+    appendReturnPoint(ReturnPoint(calc_retaddr(env, pc), get_asid(env, pc), data, open_callback));
     
 }
 
