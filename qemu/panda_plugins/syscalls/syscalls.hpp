@@ -10,7 +10,7 @@ inline target_asid get_asid(CPUState *env, target_ulong addr);
 inline target_ulong get_return_val(CPUState *env);
 
 class CallbackData {
-    
+    virtual ~CallbackData() { } 
 };
 
 //ReturnPoints contain a contuation that does something
