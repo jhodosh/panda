@@ -30,6 +30,8 @@ extern "C"{
 #include <algorithm>
 #include <memory>
 
+#include "syscalls.hpp"
+
 bool translate_callback(CPUState *env, target_ulong pc);
 int exec_callback(CPUState *env, target_ulong pc);
 extern "C" {
@@ -122,36 +124,6 @@ bool translate_callback(CPUState *env, target_ulong pc) {
     return false;
 #endif
 }
-
-
-//ReturnPoints contain a contuation that does something
-
-struct CallbackData {
-    
-};
-
-typedef std::unique_ptr<CallbackData> CallbackDataPtr;
-static CallbackDataPtr make_callbackptr(CallbackData* data){
-    return CallbackDataPtr(data);
-}
-
-static void null_callback(CallbackData*, CPUState*, target_asid){
-}
-struct ReturnPoint {
-    ReturnPoint() = delete;
-    ReturnPoint(target_ulong retaddr, target_asid process_id,
-                CallbackData* data = nullptr,
-                std::function<void(CallbackData*, CPUState*, target_asid)> callback = null_callback){
-        this->retaddr = retaddr;
-        this->process_id = process_id;
-        opaque = make_callbackptr(data);
-        callback = null_callback;
-    }
-    target_ulong retaddr;
-    target_asid process_id;
-    CallbackDataPtr opaque;
-    std::function<void(CallbackData*, CPUState*, target_asid)> callback;
-};
 
 static std::list<ReturnPoint> fork_returns;
 static std::list<ReturnPoint> exec_returns;
