@@ -176,6 +176,15 @@ void call_sys_pread64_callback(CPUState* env,target_ulong pc,uint32_t fd,target_
         target_asid asid = get_asid(env, pc);
         cout << "Reading p64 from " << asid_to_fds[asid][fd];
 }
-void call_sys_write_callback(CPUState* env,target_ulong pc,uint32_t fd,target_ulong buf,uint32_t count) { }
-void call_sys_pwrite64_callback(CPUState* env,target_ulong pc,uint32_t fd,target_ulong buf,uint32_t count,uint64_t pos) { }
-void call_sys_writev_callback(CPUState* env,target_ulong pc,uint32_t fd,target_ulong vec,uint32_t vlen) { }
+void call_sys_write_callback(CPUState* env,target_ulong pc,uint32_t fd,target_ulong buf,uint32_t count) {
+    target_asid asid = get_asid(env, pc);
+    cout << "Writing to " << asid_to_fds[asid][fd];
+}
+void call_sys_pwrite64_callback(CPUState* env,target_ulong pc,uint32_t fd,target_ulong buf,uint32_t count,uint64_t pos) { 
+    target_asid asid = get_asid(env, pc);
+    cout << "Writing pv64 to " << asid_to_fds[asid][fd];
+}
+void call_sys_writev_callback(CPUState* env,target_ulong pc,uint32_t fd,target_ulong vec,uint32_t vlen) {
+    target_asid asid = get_asid(env, pc);
+    cout << "Writing v to " << asid_to_fds[asid][fd];
+}
