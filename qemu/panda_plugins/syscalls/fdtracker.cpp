@@ -60,7 +60,13 @@ static target_ulong calc_retaddr(CPUState* env, target_ulong pc){
 }
 
 //mkdirs
+static void call_sys_mkdirat_callback(CPUState* env,target_ulong pc,uint32_t dfd,std::string pathname,uint32_t mode) { 
+    
+}
 
+static void call_sys_mkdir_callback(CPUState* env,target_ulong pc,std::string pathname,uint32_t mode) { 
+    
+}
 //opens
 
 static void open_callback(CallbackData* opaque, CPUState* env, target_asid asid){
@@ -79,14 +85,14 @@ static void open_callback(CallbackData* opaque, CPUState* env, target_asid asid)
     mymap[get_return_val(env)] = dirname;
 }
 
-void do_open(CPUState *env, target_ulong pc, std::string filename,uint32_t flags,uint32_t mode){
+void call_sys_open_callback(CPUState *env, target_ulong pc, std::string filename,uint32_t flags,uint32_t mode){
     OpenCallbackData* data = new OpenCallbackData;
     data->path = filename;
     data->base_fd = NULL_FD;
     appendReturnPoint(ReturnPoint(calc_retaddr(env, pc), get_asid(env, pc), data, open_callback));
 }
 
-void do_openat(CPUState* env,target_ulong pc,uint32_t dfd,std::string filename,uint32_t flags,uint32_t mode){
+void call_sys_openat_callback(CPUState* env,target_ulong pc,uint32_t dfd,std::string filename,uint32_t flags,uint32_t mode){
     OpenCallbackData* data = new OpenCallbackData;
     data->path = filename;
     data->base_fd = dfd;
