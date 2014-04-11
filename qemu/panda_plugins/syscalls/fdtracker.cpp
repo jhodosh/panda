@@ -60,11 +60,11 @@ static target_ulong calc_retaddr(CPUState* env, target_ulong pc){
 }
 
 //mkdirs
-static void call_sys_mkdirat_callback(CPUState* env,target_ulong pc,uint32_t dfd,std::string pathname,uint32_t mode) { 
+void call_sys_mkdirat_callback(CPUState* env,target_ulong pc,uint32_t dfd,std::string pathname,uint32_t mode) { 
     
 }
 
-static void call_sys_mkdir_callback(CPUState* env,target_ulong pc,std::string pathname,uint32_t mode) { 
+void call_sys_mkdir_callback(CPUState* env,target_ulong pc,std::string pathname,uint32_t mode) { 
     
 }
 //opens
