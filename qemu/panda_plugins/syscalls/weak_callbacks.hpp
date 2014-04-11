@@ -1,6 +1,10 @@
 
 #include <string>
 
+extern "C" {
+#include "cpu.h"
+}
+
 // weak-defined default empty callbacks for all syscalls
 void __attribute__((weak)) call_sys_restart_syscall_callback(CPUState* env,target_ulong pc);
 void __attribute__((weak)) call_sys_exit_callback(CPUState* env,target_ulong pc,uint32_t error_code);

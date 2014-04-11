@@ -208,6 +208,10 @@ weak_callbacks = ""
 weak_callbacks+= """
 #include <string>
 
+extern "C" {
+#include "cpu.h"
+}
+
 // weak-defined default empty callbacks for all syscalls
 """
 for callback_def in callback_defs:
