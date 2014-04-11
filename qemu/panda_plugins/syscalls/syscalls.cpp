@@ -131,7 +131,7 @@ static std::list<ReturnPoint> mmap_returns;
 // always return to same process
 static std::list<ReturnPoint> other_returns;
 
-void appendReturnPoint(ReturnPoint& rp){
+void appendReturnPoint(ReturnPoint&& rp){
     other_returns.push_back(std::move(rp));
 }
 
