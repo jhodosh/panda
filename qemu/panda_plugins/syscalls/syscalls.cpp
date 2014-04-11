@@ -252,7 +252,7 @@ static int returned_check_callback(CPUState *env, TranslationBlock *tb){
     
     for(auto& retVal : other_returns){
         if(retVal.retaddr == tb->pc && retVal.process_id == get_asid(env, tb->pc)){
-            retVal.callback(retVal.opaque.get(), retVal.retaddr, retVal.process_id);
+            retVal.callback(retVal.opaque.get(), env, retVal.process_id);
             retVal.retaddr = retVal.process_id = 0;
         }
     }
