@@ -187,8 +187,8 @@ with open("android_arm_prototypes.txt") as armcalls:
     alltext += "default:"+'\n'
     alltext += "record_syscall(\"UNKNOWN\");"+'\n'
     alltext += "}"+'\n'
-weak_callbacks = ""
-weak_callbacks+= """
+weak_callbacks = "#include \"weak_callbacks.hpp\"\n"
+weak_callbacks+= "extern \"C\"{\n#include \"qemu-common.h\n}\n""
 
 // weak-defined default empty callbacks for all syscalls
 """
