@@ -29,7 +29,7 @@ struct ReturnPoint {
     ReturnPoint() = delete;
     ReturnPoint(target_ulong retaddr, target_asid process_id,
                 CallbackData* data = nullptr,
-                std::function<void(CallbackData*, CPUState*, target_asid)> callback = nullptr){
+                std::function<void(CallbackData*, CPUState*, target_asid)> callback = null_callback){
         this->retaddr = retaddr;
         this->process_id = process_id;
         opaque = make_callbackptr(data);
