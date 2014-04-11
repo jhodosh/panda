@@ -87,14 +87,14 @@ static void open_callback(CallbackData* opaque, CPUState* env, target_asid asid)
 void call_sys_mkdirat_callback(CPUState* env,target_ulong pc,uint32_t dfd,std::string pathname,uint32_t mode) { 
     OpenCallbackData* data = new OpenCallbackData;
     data->path = pathname;
-    data->base_fd = NULL_FD;
+    data->base_fd = dfd;
     appendReturnPoint(ReturnPoint(calc_retaddr(env, pc), get_asid(env, pc), data, open_callback));
 }
 
 void call_sys_mkdir_callback(CPUState* env,target_ulong pc,std::string pathname,uint32_t mode) { 
     OpenCallbackData* data = new OpenCallbackData;
-    data->path = filename;
-    data->base_fd = dfd;
+    data->path = pathname;
+    data->base_fd = NULL_FD;
     appendReturnPoint(ReturnPoint(calc_retaddr(env, pc), get_asid(env, pc), data, open_callback));
 }
 //opens
