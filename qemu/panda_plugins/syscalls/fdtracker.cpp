@@ -51,8 +51,7 @@ public:
 static target_ulong calc_retaddr(CPUState* env, target_ulong pc){
 #if defined(TARGET_ARM)
     // Normal syscalls: return addr is stored in LR
-    target_ulong retaddr =  env->regs[14];
-    return retaddr & ~1;
+    return mask_retaddr_to_pc(env->regs[14]);
     // Fork, exec
     uint8_t offset = 0;
     if(env->thumb == 0){

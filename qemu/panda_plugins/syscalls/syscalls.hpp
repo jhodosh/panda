@@ -3,11 +3,17 @@
 
 #include <functional>
 #include <memory>
+#include <limits>
 
 typedef target_ulong target_asid;
 
 target_asid get_asid(CPUState *env, target_ulong addr);
 target_ulong get_return_val(CPUState *env);
+
+static inline target_ulong mask_retaddr_to_pc(target_ulong retaddr){
+    target_ulong mask = std::numeric_limits<target_ulong>::max() -1;
+    return retaddr & mask;
+}
 
 class CallbackData {
 public:
