@@ -48,6 +48,13 @@ public:
     target_ulong new_fd;
 };
 
+class ReadCallbackData : public CallbackData {
+public:
+    target_ulong fd;
+    target_ulong guest_buffer;
+    uint32_t len;
+};
+
 static target_ulong calc_retaddr(CPUState* env, target_ulong pc){
 #if defined(TARGET_ARM)
     // Normal syscalls: return addr is stored in LR
@@ -168,6 +175,20 @@ void call_sys_dup3_callback(CPUState* env,target_ulong pc,uint32_t oldfd,uint32_
 void call_sys_close_callback(CPUState* env,target_ulong pc,uint32_t fd) { }
 
 void call_sys_readahead_callback(CPUState* env,target_ulong pc,uint32_t fd,uint64_t offset,uint32_t count) { }
+
+static void read_callback(CallbackData* opaque, CPUState* env, target_asid asid){
+    ReadCallbackData* data = dynamic_cast<ReadCallbackData*>(opaque);
+    if(!data){
+        fprintf(stderr, "oops\n");
+        return;
+    }
+    string filename = asid_to_fds[asid][data->fd];
+    if (filename.empty()){
+        
+    }
+    auto retval = get_return_val(env);
+    
+}
 
 void call_sys_read_callback(CPUState* env,target_ulong pc,uint32_t fd,target_ulong buf,uint32_t count) { 
     target_asid asid = get_asid(env, pc);
