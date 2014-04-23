@@ -52,6 +52,7 @@ static target_ulong calc_retaddr(CPUState* env, target_ulong pc){
 #if defined(TARGET_ARM)
     // Normal syscalls: return addr is stored in LR
     return mask_retaddr_to_pc(env->regs[14]);
+
     // Fork, exec
     uint8_t offset = 0;
     if(env->thumb == 0){
@@ -170,25 +171,25 @@ void call_sys_readahead_callback(CPUState* env,target_ulong pc,uint32_t fd,uint6
 
 void call_sys_read_callback(CPUState* env,target_ulong pc,uint32_t fd,target_ulong buf,uint32_t count) { 
     target_asid asid = get_asid(env, pc);
-    cout << "Reading from " << asid_to_fds[asid][fd];
+    cout << "Reading from " << asid_to_fds[asid][fd] << endl;
 }
 void call_sys_readv_callback(CPUState* env,target_ulong pc,uint32_t fd,target_ulong vec,uint32_t vlen) { 
     target_asid asid = get_asid(env, pc);
-    cout << "Reading v from " << asid_to_fds[asid][fd];
+    cout << "Reading v from " << asid_to_fds[asid][fd] << endl;
 }
 void call_sys_pread64_callback(CPUState* env,target_ulong pc,uint32_t fd,target_ulong buf,uint32_t count,uint64_t pos) {
         target_asid asid = get_asid(env, pc);
-        cout << "Reading p64 from " << asid_to_fds[asid][fd];
+        cout << "Reading p64 from " << asid_to_fds[asid][fd] << endl;
 }
 void call_sys_write_callback(CPUState* env,target_ulong pc,uint32_t fd,target_ulong buf,uint32_t count) {
     target_asid asid = get_asid(env, pc);
-    cout << "Writing to " << asid_to_fds[asid][fd];
+    cout << "Writing to " << asid_to_fds[asid][fd] << endl;
 }
 void call_sys_pwrite64_callback(CPUState* env,target_ulong pc,uint32_t fd,target_ulong buf,uint32_t count,uint64_t pos) { 
     target_asid asid = get_asid(env, pc);
-    cout << "Writing pv64 to " << asid_to_fds[asid][fd];
+    cout << "Writing pv64 to " << asid_to_fds[asid][fd] << endl;
 }
 void call_sys_writev_callback(CPUState* env,target_ulong pc,uint32_t fd,target_ulong vec,uint32_t vlen) {
     target_asid asid = get_asid(env, pc);
-    cout << "Writing v to " << asid_to_fds[asid][fd];
+    cout << "Writing v to " << asid_to_fds[asid][fd] << endl;
 }
