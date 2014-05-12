@@ -23,6 +23,7 @@ PANDAENDCOMMENT */
 
 #include <map>
 #include <string>
+#include <list>
 #include "weak_callbacks.hpp"
 #include "syscalls.hpp"
 #include <iostream>
@@ -35,6 +36,113 @@ using namespace std;
 typedef map<int, string> fdmap;
 
 map<target_ulong, fdmap> asid_to_fds;
+
+#if defined(CONFIG_PANDA_VMI)
+#include "introspection/DroidScope/LinuxAPI.h"
+
+// copy any descriptors from parent ASID to child ASID that aren't set in child
+static void copy_fds(target_asid parent_asid, target_asid child_asid){
+    for(auto parent_mapping : asid_to_fds[parent_asid]){
+        auto child_it = asid_to_fds[child_asid].find(parent_mapping.first);
+        if (child_it == asid_to_fds[child_asid].end()){
+            asid_to_fds[child_asid][parent_mapping.first] = parent_mapping.second;
+        }
+    }
+}
+
+list<target_asid> outstanding_child_asids;
+map<target_ulong, target_asid> outstanding_child_pids;
+
+
+/* Deal with all scheduling cases:
+ * - Parent returns first: PID of child is logged for copying
+ * - Child returns first, not in VMI table yet: ASID is logged for copy at next chance
+ * - Child returns first, in VMI table: copy will occur when parent returns :)
+ * - Parent returns 
+ * 
+ * - parent runs first, child runs second but this callback runs 
+ *      BEFORE the VMI can register the child process
+ */
+static int return_from_fork(CPUState *env){
+    target_ulong child_pid = get_return_val(env);
+    if(0 == child_pid){
+        // This IS the child!
+        assert("return_from_fork should only ever be called for the parent!");
+        target_asid  asid;
+        target_ulong pc;
+        target_ulong cs_base;
+        int flags;
+        cpu_get_tb_cpu_state(env, &pc, &cs_base, &flags);
+        asid = get_asid(env, pc);
+        // See if the VMI can tell us our PID
+        ProcessInfo* self_child = findProcessByPGD(asid);
+        if(nullptr == self_child){
+            // no, we can't look up our PID yet
+            outstanding_child_asids.push_back(get_asid(env, pc));
+        }else{
+            auto it = outstanding_child_pids.find(self_child->pid);
+            if (it == outstanding_child_pids.end()){
+                outstanding_child_asids.push_back(get_asid(env, pc));
+            }else{
+                target_asid parent_asid = it->second;
+                copy_fds(parent_asid, asid);
+                outstanding_child_pids.erase(it);
+            }
+        }
+        return 0;
+    }
+
+    // returned to the parent
+    ProcessInfo* child = findProcessByPID(child_pid);
+    if(nullptr == child){
+        // child hasn't run yet!
+        target_ulong pc;
+        target_ulong cs_base;
+        int flags;
+        cpu_get_tb_cpu_state(env, &pc, &cs_base, &flags);
+        // log that this ASID is the parent of the child's PID
+        outstanding_child_pids[child_pid] = get_asid(env, pc);
+        return 0;
+    }
+    //we're in the parent and the child has run
+    target_ulong pc;
+    target_ulong cs_base;
+    int flags;
+    cpu_get_tb_cpu_state(env, &pc, &cs_base, &flags);
+
+    copy_fds(get_asid(env, pc), child->pgd);
+    outstanding_child_asids.remove(child->pgd);
+    return 0;
+}
+
+static void preExecForkCopier(CPUState* env, target_ulong pc){
+    //is this process in outstanding_child_pids?
+    if (outstanding_child_pids.empty()) {
+        return;
+    }
+    target_asid my_asid = get_asid(env, pc);
+    ProcessInfo* my_proc = findProcessByPGD(my_asid);
+    if(nullptr == my_proc){
+        // VMI doen't know about me yet... weird
+        return;
+    }
+    auto it = outstanding_child_pids.find(my_proc->pid);
+    if (it == outstanding_child_pids.end()){
+        return;
+    }
+    // this is a process we're looking for!
+    copy_fds(it->second, my_asid);
+    outstanding_child_pids.erase(it);
+}
+
+struct StaticBlock {
+    StaticBlock(){
+        registerExecPreCallback(preExecForkCopier);
+    }
+};
+static StaticBlock staticBlock;
+
+#endif
 
 class OpenCallbackData : public CallbackData {
 public:
