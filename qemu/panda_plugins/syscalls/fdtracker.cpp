@@ -214,3 +214,91 @@ void call_sys_writev_callback(CPUState* env,target_ulong pc,uint32_t fd,target_u
     target_asid asid = get_asid(env, pc);
     cout << "Writing v to " << asid_to_fds[asid][fd] << endl;
 }
+
+#if defined(SYSCALLS_FDS_TRACK_SOCKETS)
+// SOCKET OPERATIONS --------------------------------------------------------------------
+// AF_UNIX, AF_LOCAL, etc
+#include <sys/socket.h>
+//kernel source says sa_family_t is an unsigned short
+
+typedef map<int, sa_family_t> sdmap;
+
+map<target_ulong, sdmap> asid_to_sds;
+
+class SocketCallbackData : public CallbackData{
+    string socketname;
+    sa_family_t domain;
+};
+
+static void socket_callback(CallbackData* opaque, CPUState* env, target_asid asid){
+    SocketCallbackData* data = dynamic_cast<SocketCallbackData*>(opaque);
+    if(!data){
+        fprintf(stderr, "oops\n");
+        return;
+    }
+    target_ulong new_sd = get_return_val(env);
+    auto& mymap = asid_to_fds[asid];
+    mymap[new_sd] = data->socketname;
+    if(AF_UNSPEC != data->domain){
+        auto& mysdmap = asid_to_sds[asid];
+        mysdmap[new_sd] = data->domain;
+    }
+}
+
+/*
+bind - updates name?
+struct sockaddr {
+               sa_family_t sa_family;
+               char        sa_data[14];
+           }
+*/
+void call_sys_bind_callback(CPUState* env,target_ulong pc,uint32_t sockfd,target_ulong sockaddr_ptr,uint32_t sockaddrlen){
+   
+}
+/*
+connect - updates name?
+*/
+void call_sys_connect_callback(CPUState* env,target_ulong pc,uint32_t sockfd,target_ulong sockaddr_ptr,uint32_t sockaddrlen){
+}
+/*
+socket - fd
+Return value should be labeled "unbound socket"
+*/
+void call_sys_socket_callback(CPUState* env,target_ulong pc,uint32_t domain,uint32_t type,uint32_t protocol){
+    SocketCallbackData* data = new SocketCallbackData;
+    data->socketname = "unbound socket";
+    data->domain = domain;
+    appendReturnPoint(ReturnPoint(calc_retaddr(env, pc), get_asid(env, pc), data, socket_callback));
+}
+/*
+send, sendto, sendmsg - 
+recv, recvfrom, recvmsg - gets datas!
+listen
+socketpair - two new fds
+*/
+class SockpairCallbackData : public CallbackData{
+    target_ulong sd_array;
+    uint32_t domain;
+};
+static void sockpair_callback(CallbackData* opaque, CPUState* env, target_asid asid){
+    SockpairCallbackData* data = dynamic_cast<SockpairCallbackData*>(opaque);
+    if(!data){
+        fprintf(stderr, "oops\n");
+        return;
+    }
+    target_ulong retval = get_return_val(env);
+    //"On success, zero is returned.  On error, -1 is returned, and errno is set appropriately."
+    if(0 != retval){
+        return;
+    }
+    // sd_array is an array of ints, length 2. NOT target_ulong
+    int sd_array[2];
+    panda_virtual_memory_rw(env, data->sd_array, sd_array, 2*sizeof(int), 0);
+    
+}
+void call_sys_socketpair_callback(CPUState* env,target_ulong pc,uint32_t domain,uint32_t type,uint32_t protocol,target_ulong sd_array){
+    
+}
+/*
+accept, accept4 - new fd*/
+#endif // SYSCALLS_FDS_TRACK_SOCKETS
