@@ -38,7 +38,9 @@ typedef map<int, string> fdmap;
 map<target_ulong, fdmap> asid_to_fds;
 
 #if defined(CONFIG_PANDA_VMI)
+extern "C" {
 #include "introspection/DroidScope/LinuxAPI.h"
+}
 
 // copy any descriptors from parent ASID to child ASID that aren't set in child
 static void copy_fds(target_asid parent_asid, target_asid child_asid){
