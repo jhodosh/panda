@@ -7,7 +7,7 @@ extern "C"{
 // weak-defined default empty callbacks for all syscalls
 void __attribute__((weak)) call_sys_faccessat_callback(CPUState* env,target_ulong pc,uint32_t dfd,std::string filename,uint32_t mode) { }
 void __attribute__((weak)) call_sys_ftruncate_callback(CPUState* env,target_ulong pc,uint32_t fd,uint32_t length) { }
-void __attribute__((weak)) call_sys_tgkill_callback(CPUState* env,target_ulong pc,uint32_t tgid,uint32_t pid,uint32_t sig) { }
+void __attribute__((weak)) call_clone_callback(CPUState* env,target_ulong pc,uint32_t clone_flags,uint32_t newsp,target_ulong parent_tidptr,uint32_t tls_val,target_ulong child_tidptr,target_ulong regs) { }
 void __attribute__((weak)) call_sys_readv_callback(CPUState* env,target_ulong pc,uint32_t fd,target_ulong vec,uint32_t vlen) { }
 void __attribute__((weak)) call_sys_sendto_callback(CPUState* env,target_ulong pc,uint32_t arg0,target_ulong arg1,uint32_t arg2,uint32_t arg3,target_ulong arg4,uint32_t arg5) { }
 void __attribute__((weak)) call_sys_arm_fadvise64_64_callback(CPUState* env,target_ulong pc,uint32_t fd,uint32_t advice,uint64_t offset,uint64_t len) { }
@@ -141,6 +141,7 @@ void __attribute__((weak)) call_sys_getresuid_callback(CPUState* env,target_ulon
 void __attribute__((weak)) call_sys_readlink_callback(CPUState* env,target_ulong pc,std::string path,target_ulong buf,uint32_t bufsiz) { }
 void __attribute__((weak)) call_sys_umask_callback(CPUState* env,target_ulong pc,uint32_t mask) { }
 void __attribute__((weak)) call_sys_inotify_add_watch_callback(CPUState* env,target_ulong pc,uint32_t fd,std::string path,uint32_t mask) { }
+void __attribute__((weak)) call_sys_tgkill_callback(CPUState* env,target_ulong pc,uint32_t tgid,uint32_t pid,uint32_t sig) { }
 void __attribute__((weak)) call_sys_swapon_callback(CPUState* env,target_ulong pc,std::string specialfile,uint32_t swap_flags) { }
 void __attribute__((weak)) call_sys_setitimer_callback(CPUState* env,target_ulong pc,uint32_t which,target_ulong value,target_ulong ovalue) { }
 void __attribute__((weak)) call_sys_getitimer_callback(CPUState* env,target_ulong pc,uint32_t which,target_ulong value) { }
@@ -175,7 +176,6 @@ void __attribute__((weak)) call_sys_nfsservctl_callback(CPUState* env,target_ulo
 void __attribute__((weak)) call_sys_mount_callback(CPUState* env,target_ulong pc,std::string dev_name,std::string dir_name,std::string type,uint32_t flags,target_ulong data) { }
 void __attribute__((weak)) call_sys_setxattr_callback(CPUState* env,target_ulong pc,std::string path,std::string name,target_ulong value,uint32_t size,uint32_t flags) { }
 void __attribute__((weak)) call_sys_vhangup_callback(CPUState* env,target_ulong pc) { }
-void __attribute__((weak)) call_clone_callback(CPUState* env,target_ulong pc,target_ulong fn,target_ulong child_stack,uint32_t flags,target_ulong arg,target_ulong arg4) { }
 void __attribute__((weak)) call_sys_accept_callback(CPUState* env,target_ulong pc,uint32_t arg0,target_ulong arg1,target_ulong arg2) { }
 void __attribute__((weak)) call_sys_capset_callback(CPUState* env,target_ulong pc,target_ulong header,target_ulong data) { }
 void __attribute__((weak)) call_sys_io_setup_callback(CPUState* env,target_ulong pc,uint32_t nr_reqs,target_ulong ctx) { }

@@ -673,15 +673,16 @@ record_syscall("sigreturn");
 call_sigreturn_callback(env,pc);
 finish_syscall();
 }; break;
-// 120 unsigned long clone ['int (*fn)(void *)', ' void *child_stack', ' int flags', ' void *arg', ' ...']
+// 120 unsigned long clone ['unsigned long clone_flags', ' unsigned long newsp', ' int __user *parent_tidptr', ' int tls_val', ' int __user *child_tidptr', ' struct pt_regs *regs']
 case 120: {
 record_syscall("clone");
-target_ulong fn = log_pointer(env->regs[0], "int (*fn)(void *)");
-target_ulong child_stack = log_pointer(env->regs[1], " void *child_stack");
-uint32_t flags = log_32(env->regs[2], " int flags");
-target_ulong arg = log_pointer(env->regs[3], " void *arg");
-target_ulong arg4 = log_pointer(env->regs[4], " ...");
-call_clone_callback(env,pc,fn,child_stack,flags,arg,arg4);
+uint32_t clone_flags = log_32(env->regs[0], "unsigned long clone_flags");
+uint32_t newsp = log_32(env->regs[1], " unsigned long newsp");
+target_ulong parent_tidptr = log_pointer(env->regs[2], " int __user *parent_tidptr");
+uint32_t tls_val = log_32(env->regs[3], " int tls_val");
+target_ulong child_tidptr = log_pointer(env->regs[4], " int __user *child_tidptr");
+target_ulong regs = log_pointer(env->regs[5], " struct pt_regs *regs");
+call_clone_callback(env,pc,clone_flags,newsp,parent_tidptr,tls_val,child_tidptr,regs);
 finish_syscall();
 }; break;
 // 121 long sys_setdomainname ['char __user *name', ' int len']
