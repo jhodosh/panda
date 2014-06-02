@@ -28,6 +28,10 @@ PANDAENDCOMMENT */
 #include "syscalls.hpp"
 #include <iostream>
 
+extern "C" {
+#include "panda_plugin.h"
+}
+
 const target_ulong NULL_FD = 0;
 
 using namespace std;
@@ -159,6 +163,10 @@ static void preExecForkCopier(CPUState* env, target_ulong pc){
 struct StaticBlock {
     StaticBlock(){
         registerExecPreCallback(preExecForkCopier);
+        panda_cb pcb;
+
+        pcb.return_from_fork = return_from_fork;
+        panda_register_callback(syscalls_plugin_self, PANDA_CB_VMI_AFTER_FORK, pcb);
     }
 };
 static StaticBlock staticBlock;

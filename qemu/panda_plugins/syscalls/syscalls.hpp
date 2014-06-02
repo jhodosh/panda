@@ -51,4 +51,6 @@ void appendReturnPoint(ReturnPoint&& rp);
 
 void registerExecPreCallback(std::function<void(CPUState*, target_ulong)> callback);
 
+extern void* syscalls_plugin_self;
+
 #endif
