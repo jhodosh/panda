@@ -42,6 +42,11 @@ extern "C" {
 #include "introspection/DroidScope/LinuxAPI.h"
 }
 
+#define TEST_FORK
+#ifdef TEST_FORK
+map<target_asid, bool> tracked_forks;
+#endif
+
 // copy any descriptors from parent ASID to child ASID that aren't set in child
 static void copy_fds(target_asid parent_asid, target_asid child_asid){
     for(auto parent_mapping : asid_to_fds[parent_asid]){
@@ -104,6 +109,9 @@ static int return_from_fork(CPUState *env){
         cpu_get_tb_cpu_state(env, &pc, &cs_base, &flags);
         // log that this ASID is the parent of the child's PID
         outstanding_child_pids[child_pid] = get_asid(env, pc);
+#ifdef TEST_FORK
+        tracked_forks[get_asid(env, pc)] = false;
+#endif
         return 0;
     }
     //we're in the parent and the child has run
@@ -114,10 +122,18 @@ static int return_from_fork(CPUState *env){
 
     copy_fds(get_asid(env, pc), child->pgd);
     outstanding_child_asids.remove(child->pgd);
+#ifdef TEST_FORK
+    tracked_forks[child->pgd] = true;
+#endif
     return 0;
 }
 
 static void preExecForkCopier(CPUState* env, target_ulong pc){
+#ifdef TEST_FORK
+    for(auto fork : tracked_forks){
+        cout << "Forked process " << fork.first << ": " << fork.second << endl;
+    }
+#endif
     //is this process in outstanding_child_pids?
     if (outstanding_child_pids.empty()) {
         return;
@@ -135,6 +151,9 @@ static void preExecForkCopier(CPUState* env, target_ulong pc){
     // this is a process we're looking for!
     copy_fds(it->second, my_asid);
     outstanding_child_pids.erase(it);
+#ifdef TEST_FORK
+    tracked_forks[my_asid] = true;
+#endif
 }
 
 struct StaticBlock {
