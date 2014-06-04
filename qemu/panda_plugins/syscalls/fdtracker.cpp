@@ -68,7 +68,7 @@ extern "C" {
 }
 
 
-#define TEST_FORK
+//#define TEST_FORK
 #ifdef TEST_FORK
 map<target_asid, bool> tracked_forks;
 #endif
@@ -182,7 +182,7 @@ static void preExecForkCopier(CPUState* env, target_ulong pc){
 #endif
 }
 
-#define TEST_CLONE
+//#define TEST_CLONE
 #ifdef TEST_CLONE
 map<target_asid, bool> tracked_clones;
 #endif
@@ -338,6 +338,17 @@ static void open_callback(CallbackData* opaque, CPUState* env, target_asid asid)
     }
     dirname += "/" + data->path;
     mymap[get_return_val(env)] = dirname;
+    char* comm = "";
+#ifdef CONFIG_PANDA_VMI
+    ProcessInfo* me = findProcessByPGD(asid);
+    if(me){
+        if(me->strName[0] != '\0')
+            comm = me->strName;
+        else
+            comm = findProcessByPGD(asid)->strComm;
+    }
+#endif
+    cout << "Process " << comm << " opened " << dirname << endl;
 }
 
 //mkdirs
@@ -357,7 +368,6 @@ void call_sys_mkdir_callback(CPUState* env,target_ulong pc,std::string pathname,
 //opens
 
 void call_sys_open_callback(CPUState *env, target_ulong pc, std::string filename,uint32_t flags,uint32_t mode){
-    printf("open\n");
     OpenCallbackData* data = new OpenCallbackData;
     data->path = filename;
     data->base_fd = NULL_FD;
@@ -365,7 +375,6 @@ void call_sys_open_callback(CPUState *env, target_ulong pc, std::string filename
 }
 
 void call_sys_openat_callback(CPUState* env,target_ulong pc,uint32_t dfd,std::string filename,uint32_t flags,uint32_t mode){
-    printf("openat\n");
     OpenCallbackData* data = new OpenCallbackData;
     data->path = filename;
     data->base_fd = dfd;
