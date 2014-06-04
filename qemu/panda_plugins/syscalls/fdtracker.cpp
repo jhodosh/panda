@@ -352,7 +352,7 @@ static void open_callback(CallbackData* opaque, CPUState* env, target_asid asid)
     dirname += "/" + data->path;
     mymap[get_return_val(env)] = dirname;
     char* comm = getName(asid);
-    cout << "Process " << comm << " opened " << dirname << endl;
+    cout << "Process " << comm << " opened " << dirname << " as FD " << get_return_val(env) <<  endl;
 }
 
 //mkdirs
