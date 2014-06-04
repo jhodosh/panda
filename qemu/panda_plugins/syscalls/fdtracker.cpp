@@ -463,7 +463,7 @@ static void read_callback(CallbackData* opaque, CPUState* env, target_asid asid)
 void call_sys_read_callback(CPUState* env,target_ulong pc,uint32_t fd,target_ulong buf,uint32_t count) { 
     target_asid asid = get_asid(env, pc);
     char* comm = getName(asid);
-    string name = string("UNKNOWN fd") + to_string(fd);
+    string name = string("UNKNOWN fd ") + to_string(fd);
     if (asid_to_fds[asid].count(fd) > 0){
         name =  asid_to_fds[asid][fd];
     }
@@ -482,7 +482,7 @@ void call_sys_pread64_callback(CPUState* env,target_ulong pc,uint32_t fd,target_
 void call_sys_write_callback(CPUState* env,target_ulong pc,uint32_t fd,target_ulong buf,uint32_t count) {
     target_asid asid = get_asid(env, pc);
     char* comm = getName(asid);
-    string name = string("UNKNOWN fd") + to_string(fd);
+    string name = string("UNKNOWN fd ") + to_string(fd);
     if (asid_to_fds[asid].count(fd) > 0){
         name =  asid_to_fds[asid][fd];
     }
@@ -527,6 +527,7 @@ static void socket_callback(CallbackData* opaque, CPUState* env, target_asid asi
         auto& mysdmap = asid_to_sds[asid];
         mysdmap[new_sd] = data->domain;
     }
+    
 }
 
 /*
@@ -596,4 +597,8 @@ void call_sys_socketpair_callback(CPUState* env,target_ulong pc,uint32_t domain,
 }
 /*
 accept, accept4 - new fd*/
+void call_sys_accept_callback(CPUState* env,target_ulong pc,uint32_t sockfd,target_ulong arg1,target_ulong arg2) { 
+     char* conn = getName(get_asid(env, pc));
+    cout << "Process " << conn << " accepting on FD " << sockfd << endl;
+}
 #endif // SYSCALLS_FDS_TRACK_SOCKETS
