@@ -32,6 +32,10 @@ extern "C"{
 
 #include "syscalls.hpp"
 
+#if defined(CONFIG_PANDA_VMI)
+#include "introspection/DroidScope/LinuxAPI.h"
+#endif
+
 bool translate_callback(CPUState *env, target_ulong pc);
 int exec_callback(CPUState *env, target_ulong pc);
 extern "C" {
@@ -316,6 +320,7 @@ static void syscall_fprintf(CPUState* env, const char* __format, ...){
 // This will only be called for instructions where the
 // translate_callback returned true
 int exec_callback(CPUState *env, target_ulong pc) {
+    // run any code we need to update our state
     for(const auto callback : preExecCallbacks){
         callback(env, pc);
     }

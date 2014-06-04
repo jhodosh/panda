@@ -44,7 +44,10 @@ map<target_ulong, fdmap> asid_to_fds;
 #if defined(CONFIG_PANDA_VMI)
 extern "C" {
 #include "introspection/DroidScope/LinuxAPI.h"
+// sched.h contains only preprocessor defines to constant literals
+#include <linux/sched.h>
 }
+
 
 #define TEST_FORK
 #ifdef TEST_FORK
@@ -158,6 +161,26 @@ static void preExecForkCopier(CPUState* env, target_ulong pc){
 #ifdef TEST_FORK
     tracked_forks[my_asid] = true;
 #endif
+}
+
+// if flags includes CLONE_FILES then the parent and child will continue to share a single FD table
+// if flags includes CLONE_THREAD, then we don't care about the call.
+void call_clone_callback(CPUState* env,target_ulong pc,uint32_t clone_flags,uint32_t newsp,
+                         target_ulong parent_tidptr,uint32_t tls_val,
+                         target_ulong child_tidptr,target_ulong regs) {
+    if (CLONE_THREAD & clone_flags){
+        return;
+    }
+    if (CLONE_FILES & clone_flags){
+        cerr << "ERROR ERROR UNIMPLEMENTED!" << endl;
+    }
+    
+}
+
+// return value is TID = PID of child
+static int return_from_clone(CPUState* env){
+    target_ulong child_pid = get_return_val(env);
+    
 }
 
 struct StaticBlock {

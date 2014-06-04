@@ -43,15 +43,15 @@ typedef enum panda_cb_type {
     PANDA_CB_MONITOR,           // Monitor callback
     PANDA_CB_CPU_RESTORE_STATE,  // In cpu_restore_state() (fault/exception)
     PANDA_CB_BEFORE_REPLAY_LOADVM,     // at start of replay, before loadvm
-#ifndef CONFIG_SOFTMMU          // *** Only callbacks for QEMU user mode *** //
+//#ifndef CONFIG_SOFTMMU          // *** Only callbacks for QEMU user mode *** //
     PANDA_CB_USER_BEFORE_SYSCALL, // before system call
     PANDA_CB_USER_AFTER_SYSCALL,  // after system call (with return value)
-#endif
-#ifdef CONFIG_PANDA_VMI
+//#endif
+//#ifdef CONFIG_PANDA_VMI
     PANDA_CB_VMI_AFTER_FORK,    // After returning from fork()
     PANDA_CB_VMI_AFTER_EXEC,    // After returning from exec()
     PANDA_CB_VMI_AFTER_CLONE,    // After returning from clone()
-#endif
+//#endif
     PANDA_CB_VMI_PGD_CHANGED,   // After CPU's PGD is written to
     PANDA_CB_REPLAY_HD_TRANSFER,    // in replay, hd transfer
     PANDA_CB_REPLAY_BEFORE_CPU_PHYSICAL_MEM_RW_RAM,  // in replay, just before RAM case of cpu_physical_mem_rw
