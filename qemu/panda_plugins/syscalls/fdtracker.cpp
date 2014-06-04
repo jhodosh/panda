@@ -356,6 +356,8 @@ static void open_callback(CallbackData* opaque, CPUState* env, target_asid asid)
     dirname += "/" + data->path;
     mymap[get_return_val(env)] = dirname;
     char* comm = getName(asid);
+    if (NULL_FD != data->base_fd)
+        dirname += " using OPENAT";
     cout << "Process " << comm << " opened " << dirname << " as FD " << get_return_val(env) <<  endl;
 }
 
