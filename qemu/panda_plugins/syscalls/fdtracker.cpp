@@ -529,12 +529,15 @@ struct sockaddr {
            }
 */
 void call_sys_bind_callback(CPUState* env,target_ulong pc,uint32_t sockfd,target_ulong sockaddr_ptr,uint32_t sockaddrlen){
-   
+    char* conn = getName(get_asid(env, pc));
+    cout << "Process " << conn << " binding FD " << sockfd << endl;   
 }
 /*
 connect - updates name?
 */
 void call_sys_connect_callback(CPUState* env,target_ulong pc,uint32_t sockfd,target_ulong sockaddr_ptr,uint32_t sockaddrlen){
+    char* conn = getName(get_asid(env, pc));
+    cout << "Process " << conn << " connecting FD " << sockfd << endl;
 }
 /*
 socket - fd
@@ -569,11 +572,19 @@ static void sockpair_callback(CallbackData* opaque, CPUState* env, target_asid a
     }
     // sd_array is an array of ints, length 2. NOT target_ulong
     int sd_array[2];
+    // On Linux, sizeof(int) != sizeof(long)
     panda_virtual_memory_rw(env, data->sd_array, sd_array, 2*sizeof(int), 0);
+    char* comm = getName(asid);
+    cout << "Creating pipe in process " << comm << endl;
+    asid_to_fds[asid][sd_array[0]] = "<pipe>";
+    asid_to_fds[asid][sd_array[1]] = "<pipe>";
     
 }
 void call_sys_socketpair_callback(CPUState* env,target_ulong pc,uint32_t domain,uint32_t type,uint32_t protocol,target_ulong sd_array){
-    
+    SockpairCallbackData *data = new SockpairCallbackData;
+    data->domain = domain;
+    data->sd_array = sd_array;
+    appendReturnPoint(ReturnPoint(calc_retaddr(env, pc), get_asid(env, pc), data, sockpair_callback);
 }
 /*
 accept, accept4 - new fd*/
