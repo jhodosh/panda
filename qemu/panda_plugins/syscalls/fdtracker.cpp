@@ -339,6 +339,9 @@ static char* getName(target_asid asid){
 
 static void open_callback(CallbackData* opaque, CPUState* env, target_asid asid){
     OpenCallbackData* data = dynamic_cast<OpenCallbackData*>(opaque);
+    if (-1 == get_return_val(env)){
+        return;
+    }
     if(!data){
         fprintf(stderr, "oops\n");
         return;
