@@ -30,6 +30,7 @@ PANDAENDCOMMENT */
 
 extern "C" {
 #include "panda_plugin.h"
+#include <fcntl.h>
 }
 
 const target_ulong NULL_FD = 0;
@@ -385,6 +386,8 @@ void call_sys_openat_callback(CPUState* env,target_ulong pc,uint32_t dfd,std::st
     OpenCallbackData* data = new OpenCallbackData;
     data->path = filename;
     data->base_fd = dfd;
+    if (dfd == AT_FDCWD)
+        data->base_fd = NULL_FD;
     appendReturnPoint(ReturnPoint(calc_retaddr(env, pc), get_asid(env, pc), data, open_callback));
 }
 
