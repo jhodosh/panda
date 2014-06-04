@@ -136,7 +136,7 @@ static int return_from_fork(CPUState *env){
         // log that this ASID is the parent of the child's PID
         outstanding_child_pids[child_pid] = get_asid(env, pc);
 #ifdef TEST_FORK
-        tracked_forks[get_asid(env, pc)] = false;
+        tracked_forks[child_pid] = false;
 #endif
         return 0;
     }
@@ -149,7 +149,7 @@ static int return_from_fork(CPUState *env){
     copy_fds(get_asid(env, pc), child->pgd);
     outstanding_child_asids.remove(child->pgd);
 #ifdef TEST_FORK
-    tracked_forks[child->pgd] = true;
+    tracked_forks[child_pid] = true;
 #endif
     return 0;
 }
@@ -178,7 +178,7 @@ static void preExecForkCopier(CPUState* env, target_ulong pc){
     copy_fds(it->second, my_asid);
     outstanding_child_pids.erase(it);
 #ifdef TEST_FORK
-    tracked_forks[my_asid] = true;
+    tracked_forks[my_proc->pid] = true;
 #endif
 }
 
@@ -225,7 +225,7 @@ static void clone_callback(CallbackData* opaque, CPUState* env, target_asid asid
             // log that this ASID is the parent of the child's PID
             outstanding_clone_child_pids[child_pid] = asid;
 #ifdef TEST_CLONE
-            tracked_clones[get_asid(env, pc)] = false;
+            tracked_clones[child_pid] = false;
 #endif;
         } else {
             //we're in the parent and the child has run
@@ -241,7 +241,7 @@ static void clone_callback(CallbackData* opaque, CPUState* env, target_asid asid
             copy_fds(asid, child->pgd);
             outstanding_clone_child_asids.remove(child->pgd);
 #ifdef TEST_CLONE
-            tracked_clones[child->pgd] = true;
+            tracked_clones[child_pid] = true;
 #endif
         }
     }
@@ -286,7 +286,7 @@ static void preExecCloneCopier(CPUState* env, target_ulong pc){
     copy_fds(it->second, my_asid);
     outstanding_clone_child_pids.erase(it);
 #ifdef TEST_CLONE
-    tracked_clones[my_asid] = true;
+    tracked_clones[my_proc->pid] = true;
 #endif
 }
 
