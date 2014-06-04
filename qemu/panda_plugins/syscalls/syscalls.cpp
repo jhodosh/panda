@@ -262,9 +262,7 @@ static int returned_check_callback(CPUState *env, TranslationBlock *tb){
     clone_returns.remove_if(is_empty);
     
     for(auto& retVal : other_returns){
-        printf("checking return\n");
         if(retVal.retaddr == tb->pc && retVal.process_id == get_asid(env, tb->pc)){
-            printf("found one\n");
             retVal.callback(retVal.opaque.get(), env, retVal.process_id);
             retVal.retaddr = retVal.process_id = 0;
         }
