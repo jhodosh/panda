@@ -460,7 +460,10 @@ static void read_callback(CallbackData* opaque, CPUState* env, target_asid asid)
     
 }
 
-void call_sys_read_callback(CPUState* env,target_ulong pc,uint32_t fd,target_ulong buf,uint32_t count) { 
+void call_sys_read_callback(CPUState* env,target_ulong pc,uint32_t fd,target_ulong buf,uint32_t count) {
+    if (-1 == get_return_val(env)){
+        return;
+    }
     target_asid asid = get_asid(env, pc);
     char* comm = getName(asid);
     string name = string("UNKNOWN fd ") + to_string(fd);
@@ -480,6 +483,9 @@ void call_sys_pread64_callback(CPUState* env,target_ulong pc,uint32_t fd,target_
     cout << "Process " << comm << " " << "Reading p64 from " << asid_to_fds[asid][fd] << endl;
 }
 void call_sys_write_callback(CPUState* env,target_ulong pc,uint32_t fd,target_ulong buf,uint32_t count) {
+    if (-1 == get_return_val(env)){
+        return;
+    }
     target_asid asid = get_asid(env, pc);
     char* comm = getName(asid);
     string name = string("UNKNOWN fd ") + to_string(fd);
