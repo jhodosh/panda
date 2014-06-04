@@ -455,7 +455,11 @@ static void read_callback(CallbackData* opaque, CPUState* env, target_asid asid)
 void call_sys_read_callback(CPUState* env,target_ulong pc,uint32_t fd,target_ulong buf,uint32_t count) { 
     target_asid asid = get_asid(env, pc);
     char* comm = getName(asid);
-    cout << "Process " << comm << " " << "Reading from " << asid_to_fds[asid][fd] << endl;
+    string name = string("UNKNOWN fd") + to_string(fd);
+    if (asid_to_fds[asid].count(fd) > 0){
+        name =  asid_to_fds[asid][fd];
+    }
+    cout << "Process " << comm << " " << "Reading from " << name << endl;
 }
 void call_sys_readv_callback(CPUState* env,target_ulong pc,uint32_t fd,target_ulong vec,uint32_t vlen) { 
     target_asid asid = get_asid(env, pc);
@@ -470,7 +474,11 @@ void call_sys_pread64_callback(CPUState* env,target_ulong pc,uint32_t fd,target_
 void call_sys_write_callback(CPUState* env,target_ulong pc,uint32_t fd,target_ulong buf,uint32_t count) {
     target_asid asid = get_asid(env, pc);
     char* comm = getName(asid);
-    cout << "Process " << comm << " " << "Writing to " << asid_to_fds[asid][fd] << endl;
+    string name = string("UNKNOWN fd") + to_string(fd);
+    if (asid_to_fds[asid].count(fd) > 0){
+        name =  asid_to_fds[asid][fd];
+    }
+    cout << "Process " << comm << " " << "Writing to " << name << endl;
 }
 void call_sys_pwrite64_callback(CPUState* env,target_ulong pc,uint32_t fd,target_ulong buf,uint32_t count,uint64_t pos) { 
     target_asid asid = get_asid(env, pc);
