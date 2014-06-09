@@ -425,10 +425,16 @@ bool init_plugin(void *self) {
     syscalls_plugin_self = self;
     return true;
 }
-
+#if defined(CONFIG_PANDA_VMI)
+#include "introspection/DroidScope/LinuxAPI.h"
+#endif
 void uninit_plugin(void *self) {
     fflush(plugin_log);
     fclose(plugin_log);
+    for(auto& retVal : other_returns){
+        ProcessInfo* self_child = findProcessByPGD(retVal.process_id);
+        cout << "Outstanding retval " << retVal.retaddr << " in process " << self_child->strName << endl;
+    }
 }
 
 }
