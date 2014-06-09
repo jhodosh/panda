@@ -4,6 +4,7 @@
 #include <functional>
 #include <memory>
 #include <limits>
+#include <string>
 
 typedef target_ulong target_asid;
 
@@ -52,5 +53,25 @@ void appendReturnPoint(ReturnPoint&& rp);
 void registerExecPreCallback(std::function<void(CPUState*, target_ulong)> callback);
 
 extern void* syscalls_plugin_self;
+
+class OpenCallbackData : public CallbackData {
+public:
+    std::string path;
+    target_ulong base_fd;
+};
+
+class DupCallbackData: public CallbackData {
+public:
+    target_ulong old_fd;
+    target_ulong new_fd;
+};
+
+class ReadCallbackData : public CallbackData {
+public:
+    target_ulong fd;
+    target_ulong guest_buffer;
+    uint32_t len;
+};
+
 
 #endif

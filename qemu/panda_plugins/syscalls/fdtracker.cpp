@@ -305,24 +305,6 @@ static StaticBlock staticBlock;
 
 #endif
 
-class OpenCallbackData : public CallbackData {
-public:
-    string path;
-    target_ulong base_fd;
-};
-
-class DupCallbackData: public CallbackData {
-public:
-    target_ulong old_fd;
-    target_ulong new_fd;
-};
-
-class ReadCallbackData : public CallbackData {
-public:
-    target_ulong fd;
-    target_ulong guest_buffer;
-    uint32_t len;
-};
 
 static char* getName(target_asid asid){
     char* comm = "";

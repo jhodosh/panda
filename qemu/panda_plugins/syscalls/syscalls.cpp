@@ -400,8 +400,6 @@ int exec_callback(CPUState *env, target_ulong pc) {
 }
 
 
-class OpenCallbackData;
-class DupCallbackData;
 extern "C" {
 
 bool init_plugin(void *self) {
@@ -438,9 +436,9 @@ void uninit_plugin(void *self) {
         OpenCallbackData* opendata = dynamic_cast<OpenCallbackData*>(retVal.opaque.get());
         DupCallbackData* dupdata = dynamic_cast<DupCallbackData*>(retVal.opaque.get());
         if (opendata)
-            std::cout << "Outstanding open at " << retVal.retaddr << " in process " << self_child->strName << std::endl;
+            std::cout << "Outstanding open to FD " << opendata->base_fd <<" at " << retVal.retaddr << " in process " << self_child->strName << std::endl;
         else if (dupdata)
-            std::cout << "Outstanding dup at " << retVal.retaddr << " in process " << self_child->strName << std::endl;
+            std::cout << "Outstanding dup to FD " << dupdata->new_fd<< " at " << retVal.retaddr << " in process " << self_child->strName << std::endl;
         //else
                 
     }
