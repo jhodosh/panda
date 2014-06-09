@@ -400,7 +400,8 @@ int exec_callback(CPUState *env, target_ulong pc) {
 }
 
 
-
+class OpenCallbackData;
+class DupCallbackData;
 extern "C" {
 
 bool init_plugin(void *self) {
@@ -427,12 +428,21 @@ bool init_plugin(void *self) {
 #if defined(CONFIG_PANDA_VMI)
 #include "introspection/DroidScope/LinuxAPI.h"
 #endif
+
 void uninit_plugin(void *self) {
     fflush(plugin_log);
     fclose(plugin_log);
+    std::cout << "Outstanding syscalls:" << std::endl;
     for(auto& retVal : other_returns){
         ProcessInfo* self_child = findProcessByPGD(retVal.process_id);
-        std::cout << "Outstanding retval " << retVal.retaddr << " in process " << self_child->strName << std::endl;
+        OpenCallbackData* opendata = dynamic_cast<OpenCallbackData*>(retVal.opaque.get());
+        DupCallbackData* dupdata = dynamic_cast<DupCallbackData*>(retVal.opaque.get());
+        if (opendata)
+            std::cout << "Outstanding open at " << retVal.retaddr << " in process " << self_child->strName << std::endl;
+        else if (dupdata)
+            std::cout << "Outstanding dup at " << retVal.retaddr << " in process " << self_child->strName << std::endl;
+        //else
+                
     }
 }
 
