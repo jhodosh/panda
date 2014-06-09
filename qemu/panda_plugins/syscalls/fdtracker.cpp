@@ -494,7 +494,7 @@ void call_sys_write_callback(CPUState* env,target_ulong pc,uint32_t fd,target_ul
         name =  asid_to_fds[asid][fd];
     }
     cout << "Process " << comm << " " << "Writing to " << name << endl;
-    if (0 == name.compare("/dev/null")){
+    if (0 == name.compare("/dev/null") || 0 == name.compare("//dev/null")){
         uint8_t mybuf[count];
         panda_virtual_memory_rw(env, buf, mybuf, count, 0);
         devnull << mybuf << endl;
