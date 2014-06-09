@@ -521,6 +521,7 @@ typedef map<int, sa_family_t> sdmap;
 map<target_ulong, sdmap> asid_to_sds;
 
 class SocketCallbackData : public CallbackData{
+public:
     string socketname;
     sa_family_t domain;
 };
@@ -576,6 +577,7 @@ listen
 socketpair - two new fds
 */
 class SockpairCallbackData : public CallbackData{
+public:
     target_ulong sd_array;
     uint32_t domain;
 };
@@ -593,7 +595,7 @@ static void sockpair_callback(CallbackData* opaque, CPUState* env, target_asid a
     // sd_array is an array of ints, length 2. NOT target_ulong
     int sd_array[2];
     // On Linux, sizeof(int) != sizeof(long)
-    panda_virtual_memory_rw(env, data->sd_array, sd_array, 2*sizeof(int), 0);
+    panda_virtual_memory_rw(env, data->sd_array, reinterpret_cast<uint8_t*>(sd_array), 2*sizeof(int), 0);
     char* comm = getName(asid);
     cout << "Creating pipe in process " << comm << endl;
     asid_to_fds[asid][sd_array[0]] = "<pipe>";
@@ -604,7 +606,7 @@ void call_sys_socketpair_callback(CPUState* env,target_ulong pc,uint32_t domain,
     SockpairCallbackData *data = new SockpairCallbackData;
     data->domain = domain;
     data->sd_array = sd_array;
-    appendReturnPoint(ReturnPoint(calc_retaddr(env, pc), get_asid(env, pc), data, sockpair_callback);
+    appendReturnPoint(ReturnPoint(calc_retaddr(env, pc), get_asid(env, pc), data, sockpair_callback));
 }
 /*
 accept, accept4 - new fd*/
