@@ -29,12 +29,11 @@ extern "C"{
 #include <list>
 #include <algorithm>
 #include <memory>
+#include <iostream>
 
 #include "syscalls.hpp"
 
-#if defined(CONFIG_PANDA_VMI)
-#include "introspection/DroidScope/LinuxAPI.h"
-#endif
+
 
 bool translate_callback(CPUState *env, target_ulong pc);
 int exec_callback(CPUState *env, target_ulong pc);
@@ -433,7 +432,7 @@ void uninit_plugin(void *self) {
     fclose(plugin_log);
     for(auto& retVal : other_returns){
         ProcessInfo* self_child = findProcessByPGD(retVal.process_id);
-        cout << "Outstanding retval " << retVal.retaddr << " in process " << self_child->strName << endl;
+        std::cout << "Outstanding retval " << retVal.retaddr << " in process " << self_child->strName << std::endl;
     }
 }
 
