@@ -227,7 +227,7 @@ static void clone_callback(CallbackData* opaque, CPUState* env, target_asid asid
             outstanding_clone_child_pids[child_pid] = asid;
 #ifdef TEST_CLONE
             tracked_clones[child_pid] = false;
-#endif;
+#endif
         } else {
             //we're in the parent and the child has run
             target_ulong pc;
