@@ -618,21 +618,18 @@ void call_sys_pipe_callback(CPUState* env,target_ulong pc,target_ulong arg0){
     SockpairCallbackData *data = new SockpairCallbackData;
     data->domain = 0;
     data->sd_array = arg0;
-    appendReturnPoint(ReturnPoint(calc_retaddr(env, pc), get_asid(env, pc), data, sockpair_callback);
+    appendReturnPoint(ReturnPoint(calc_retaddr(env, pc), get_asid(env, pc), data, sockpair_callback));
 }
 void call_sys_pipe2_callback(CPUState* env,target_ulong pc,target_ulong arg0,uint32_t arg1){
     SockpairCallbackData *data = new SockpairCallbackData;
     data->domain = 0;
     data->sd_array = arg0;
-    appendReturnPoint(ReturnPoint(calc_retaddr(env, pc), get_asid(env, pc), data, sockpair_callback);
+    appendReturnPoint(ReturnPoint(calc_retaddr(env, pc), get_asid(env, pc), data, sockpair_callback));
 }
 //void call_sys_truncate_callback(CPUState* env,target_ulong pc,std::string path,uint32_t length);
 //void call_sys_ftruncate_callback(CPUState* env,target_ulong pc,uint32_t fd,uint32_t length);
 /*cmd == F_DUPFD, returns new fd
   cmd == F_DUPFD_CLOEXEC same */
-extern "C"  { 
-    #include <linux/fcntl.h>
-}
 void call_sys_fcntl_callback(CPUState* env,target_ulong pc,uint32_t fd,uint32_t cmd,uint32_t arg){
     if (cmd == F_DUPFD || cmd == F_DUPFD_CLOEXEC){
         DupCallbackData* data = new DupCallbackData;
