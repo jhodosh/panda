@@ -32,9 +32,6 @@ extern "C"{
 
 #include "syscalls.hpp"
 
-#if defined(CONFIG_PANDA_VMI)
-#include "introspection/DroidScope/LinuxAPI.h"
-#endif
 
 bool translate_callback(CPUState *env, target_ulong pc);
 int exec_callback(CPUState *env, target_ulong pc);
