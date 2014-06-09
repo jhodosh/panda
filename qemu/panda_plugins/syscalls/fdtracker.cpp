@@ -509,7 +509,7 @@ void call_sys_writev_callback(CPUState* env,target_ulong pc,uint32_t fd,target_u
     char* comm = getName(asid);
     cout << "Process " << comm << " " << "Writing v to " << asid_to_fds[asid][fd] << endl;
 }
-
+#define SYSCALLS_FDS_TRACK_SOCKETS
 #if defined(SYSCALLS_FDS_TRACK_SOCKETS)
 // SOCKET OPERATIONS --------------------------------------------------------------------
 // AF_UNIX, AF_LOCAL, etc
