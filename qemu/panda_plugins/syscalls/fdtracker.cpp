@@ -610,9 +610,30 @@ void call_sys_socketpair_callback(CPUState* env,target_ulong pc,uint32_t domain,
 }
 /*
 accept, accept4 - new fd*/
+class AcceptCallbackData : public CallbackData{
+public:
+    
+};
+
+static void accept_callback(CallbackData* opaque, CPUState* env, target_asid asid){
+    AcceptCallbackData* data = dynamic_cast<AcceptCallbackData*>(opaque);
+    if(!data){
+        fprintf(stderr, "oops\n");
+        return;
+    }
+    target_ulong retval = get_return_val(env);
+    if (-1 == retval){
+        return;
+    }
+    asid_to_fds[asid][retval]= "SOCKET ACCEPTED";
+    
+}
+
 void call_sys_accept_callback(CPUState* env,target_ulong pc,uint32_t sockfd,target_ulong arg1,target_ulong arg2) { 
-     char* conn = getName(get_asid(env, pc));
+    char* conn = getName(get_asid(env, pc));
     cout << "Process " << conn << " accepting on FD " << sockfd << endl;
+    AcceptCallbackData* data = new AcceptCallbackData;
+    appendReturnPoint(ReturnPoint(calc_retaddr(env, pc), get_asid(env, pc), data, accept_callback));
 }
 #endif // SYSCALLS_FDS_TRACK_SOCKETS
 
