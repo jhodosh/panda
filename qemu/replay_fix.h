@@ -15,7 +15,10 @@ PANDAENDCOMMENT */
 #ifndef __REPLAY_FIX_H
 #define __REPLAY_FIX_H
 
-void fix_replay_stuff();
+#include <stdint.h>
+#include <stdbool.h>
+
+void fix_replay_stuff(void);
 
 struct _replay_issues {
     uint64_t ram_size;

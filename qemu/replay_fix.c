@@ -15,9 +15,11 @@ PANDAENDCOMMENT */
 #include <assert.h>
 #include "replay_fix.h"
 
+#include "cpu.h"
+
 struct _replay_issues replay_issues;
 
-void fix_replay_stuff()
+void fix_replay_stuff(void)
 {
     if(replay_issues.fatal_error){
         assert(0);
