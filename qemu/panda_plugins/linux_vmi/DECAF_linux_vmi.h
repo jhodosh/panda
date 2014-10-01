@@ -26,7 +26,7 @@
 
 //#include "DECAF_main.h"
 #include "qemu-common.h"
-#include "DECAF_types.h"
+#include "linux_vmi_types.h"
 #include "panda_wrapper.h"
 /* THREE EXAMPLES of equivalent functions what the macro generates
 gpid_t DECAF_get_pid(CPUState* env, gva_t task_struct_addr)
