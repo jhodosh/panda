@@ -101,4 +101,63 @@ typedef int DECAF_errno_t;
 #define PARAMETER_ERROR (-107)
 
 #define UNINITIALIZED_ERROR (-108)
+
+/**
+ * A node in the module list
+ */
+typedef struct _ModuleNode
+{
+  gva_t startAddr;
+  gva_t endAddr;
+  gva_t flags;
+  void* moduleInfo; //I used a void* on purpose so you can't access the module info directly
+  struct _ModuleNode* next;
+} ModuleNode;
+
+/**
+ * Maximum length of the arg[0] name in the shadow list
+ */
+#define MAX_PROCESS_INFO_NAME_LEN 128
+/**
+ * Maximum length of the comm name inside the task_struct
+ */
+#define MAX_TASK_COMM_LEN 16
+
+/**
+ * A smaller data structure (compared to the one below) for
+ * threads
+ */
+
+typedef struct _ThreadNode
+{
+  union
+  {
+    gpid_t pid;
+    gpid_t tid;
+  };
+  gva_t threadInfo;
+  struct _ThreadNode* next;
+} ThreadNode;
+
+/**
+ * A node in the shadow process (task really) list. 
+ */
+typedef struct _ProcessInfo
+{
+  gva_t task_struct;
+  gpid_t pid;
+  gpid_t parentPid;
+  gpid_t tgid;
+  gpid_t glpid;
+  target_ulong uid;
+  target_ulong gid;
+  target_ulong euid;
+  target_ulong egid;
+  gpa_t pgd;
+  char strName[MAX_PROCESS_INFO_NAME_LEN];
+  char strComm[MAX_TASK_COMM_LEN];
+  ModuleNode* modules;
+  ThreadNode* threads;
+} ProcessInfo;
+
 #endif
