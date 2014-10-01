@@ -46,7 +46,7 @@ int DECAF_read_mem_until(CPUState* env, gva_t vaddr, void* buf, size_t len)
   return (i);
 }
 
-DECAF_errno_t DECAF_memory_rw_with_pgd(CPUState* env, gpa_t pgd, gva_t addr, void *buf, int len, int is_write)
+DECAF_errno_t DECAF_memory_rw_with_pgd(CPUState* env, target_asid_t pgd, gva_t addr, void *buf, int len, int is_write)
 {
   if (env == NULL)
   {
@@ -87,7 +87,7 @@ target_ulong DECAF_getESP(CPUState* env){
   }
   return (env->regs[13]);
 }
-target_ulong DECAF_get_phys_addr_with_pgd(CPUState* env, target_ulong pgd, gva_t addr)
+target_ulong DECAF_get_phys_addr_with_pgd(CPUState* env, target_asid_t pgd, gva_t addr)
 {
 
   if (env == NULL)
@@ -157,7 +157,7 @@ target_ulong DECAF_getESP(CPUState* env){
 
 }
 
-target_ulong DECAF_get_phys_addr_with_pgd(CPUState* env, target_ulong pgd, gva_t addr)
+target_ulong DECAF_get_phys_addr_with_pgd(CPUState* env, target_asid_t pgd, gva_t addr)
 {
 
   if (env == NULL)

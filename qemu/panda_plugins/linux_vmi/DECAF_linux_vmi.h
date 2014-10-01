@@ -313,7 +313,7 @@ gva_t DECAF_get_current_process(CPUState* env);
 /**
  * Returns the pgd field of the task struct passed in
 **/
-gva_t DECAF_get_pgd(CPUState* env, gva_t task_struct_addr);
+target_asid_t DECAF_get_pgd(CPUState* env, gva_t task_struct_addr);
 
 /**
  * Gets the COMM name from the task struct and copies it into the buffer
