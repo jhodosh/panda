@@ -558,7 +558,7 @@ QEMU_CFLAGS += -I$(SRC_PATH)/introspection/
 LIBS += -lstdc++ 
 
 
-libobj-y += $(obj-decaf)
+#libobj-y += $(obj-decaf)
 ### 
 ### END DECAF Sources
 ###
@@ -583,8 +583,8 @@ obj-droidscope-arm =  introspection/DroidScope/dalvik/libdex/InstrUtils.o
 #obj-droidscope +=  introspection/DroidScope/dalvikAPI/DalvikDisableJit.o
 obj-droidscope-arm +=  introspection/DroidScope/dalvikAPI/AndroidHelperFunctions.o
 obj-droidscope-arm +=  introspection/DroidScope/dalvikAPI/AndroidHelperFunctionsCPP.o
-obj-arm-y += $(obj-droidscope-arm)
-libobj-y += $(obj-droidscope)
+#obj-arm-y += $(obj-droidscope-arm)
+#libobj-y += $(obj-droidscope)
 QEMU_CFLAGS += -I$(SRC_PATH)/introspection/DroidScope/
 LIBS += -lstdc++
 
