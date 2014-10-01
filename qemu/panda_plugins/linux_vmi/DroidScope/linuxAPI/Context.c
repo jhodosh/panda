@@ -43,11 +43,10 @@
  *      Author: lok
  */
 
-#include "LinuxAPI.h"
-#include "linuxAPI/ProcessInfo.h"
-#include "introspection/DECAF_callback.h"
-#include "introspection/utils/SimpleCallback.h"
-#include "introspection/utils/OutputWrapper.h"
+#include "DroidScope/LinuxAPI.h"
+#include "DroidScope/linuxAPI/ProcessInfo.h"
+#include "utils/OutputWrapper.h"
+#include "panda_plugin.h"
 
 gpid_t curProcessPID = (-1);
 static gpa_t curProcessPGD = 0;
@@ -63,33 +62,6 @@ inline gpa_t getCurrentPGD(void)
 }
 
 int bSkipNextPGDUpdate = 0;
-static DECAF_Handle contextBBHandle;
-static DECAF_Handle contextCSHandle;
-
-/************************************************************************
- * Start of implementation section for "Callbacks"
- ************************************************************************/
-static SimpleCallback_t DroidScope_callbacks[DECAF_PROCESSES_LAST_CB];
-
-DECAF_Handle DECAF_Processes_register_callback(DECAF_Processes_callback_type_t cb_type, DECAF_Processes_callback_func_t cb_func, int *cb_cond)
-{
-  if ((cb_type > DECAF_PROCESSES_LAST_CB) || (cb_type < 0))
-  {
-    return (DECAF_NULL_HANDLE);
-  }
- 
-  return (SimpleCallback_register(&DroidScope_callbacks[cb_type], (SimpleCallback_func_t)cb_func, cb_cond));
-}
-
-DECAF_errno_t DECAF_Processes_unregister_callback(DECAF_Processes_callback_type_t cb_type, DECAF_Handle handle)
-{
-  if ((cb_type > DECAF_PROCESSES_LAST_CB) || (cb_type < 0))
-  {
-    return (-1);
-  }
-
-  return (SimpleCallback_unregister(&DroidScope_callbacks[cb_type], handle));
-}
 
 /************************************************************************
  * Start of implementation section for updating process and module structures
@@ -182,23 +154,6 @@ void updateProcessModuleList(CPUState* env, gpid_t pid)
     }
 
     int ret = updateModule(pid, vmstart, vmend, flags, name);
-    if (ret == 0xF) //if this is a new module
-    {
-      params.lm.pid = pid;
-      params.lm.pgd = getCurrentPGD();
-      params.lm.name = name; //TODO: THIS IS NOT THREAD SAFE!!!
-      params.lm.full_name = name;
-      params.lm.base = vmstart;
-      params.lm.size = vmend-vmstart;
-      SimpleCallback_dispatch(&DroidScope_callbacks[DECAF_PROCESSES_LOAD_MODULE_CB], &params);
-    }
-    else if (ret > 0)
-    {
-      params.mu.pid = pid;
-      params.mu.startAddr = vmstart;
-      params.mu.mask = ret;
-      SimpleCallback_dispatch(&DroidScope_callbacks[DECAF_PROCESSES_MODULES_UPDATED_CB], &params);
-    }
     mmap_i = DECAF_get_next_mmap(env, mmap_i);
   } while ((mmap_i != 0) && (mmap_i != mmap_first));
 
@@ -296,7 +251,7 @@ gva_t updateProcessListByTask(CPUState* env, gva_t task, int updateMask, int bNe
   gpid_t t_pid;
   gpid_t t_tgid;
 
-  gpa_t pgd;
+  target_asid_t pgd;
   char name[MAX_PROCESS_INFO_NAME_LEN];
   char argName[MAX_PROCESS_INFO_NAME_LEN];
   gva_t i = task;
@@ -336,21 +291,12 @@ gva_t updateProcessListByTask(CPUState* env, gva_t task, int updateMask, int bNe
   {
     addProcess(i, pid, parentPid, tgid, glpid, uid, gid, euid, egid, pgd, (argName[0] == '\0') ? NULL : argName, (name[0] == '\0') ? NULL : name);
     processMark(pid);
-    params.cp.pid = pid;
-    params.cp.pgd = pgd;
-    SimpleCallback_dispatch(&DroidScope_callbacks[DECAF_PROCESSES_CREATE_PROCESS_CB], &params);
     //force a module and thread update
     updateMask |= UPDATE_THREADS | UPDATE_MODULES;
   }
   else
   {
     ret = updateProcess(i, pid, parentPid, tgid, glpid, uid, gid, euid, egid, pgd, (argName[0] == '\0') ? NULL : argName, (name[0] == '\0') ? NULL : name);
-    if (ret > 0)
-    {
-      params.pu.pid = pid;
-      params.pu.mask = ret;
-      SimpleCallback_dispatch(&DroidScope_callbacks[DECAF_PROCESSES_PROCESS_UPDATED_CB], &params);
-    }
   }
 
   if (updateMask & UPDATE_THREADS)
@@ -389,7 +335,7 @@ gva_t updateProcessListByTask(CPUState* env, gva_t task, int updateMask, int bNe
   return (i);
 }
 
-void updateProcessList(CPUState* env, gpa_t newpgd, int updateMask)
+void updateProcessList(CPUState* env, target_asid_t newpgd, int updateMask)
 {
   if (env == NULL)
   {
@@ -410,7 +356,7 @@ void updateProcessList(CPUState* env, gpa_t newpgd, int updateMask)
     return;
   }
 
-  gpa_t pgd;
+  target_asid_t pgd;
   gpid_t pid;
 
   gva_t i = task;
@@ -437,11 +383,6 @@ void updateProcessList(CPUState* env, gpa_t newpgd, int updateMask)
 
   //mark the end as well as get an array of all the affected pids
   processMarkEnd(&pids, &len);
-  for (j = 0; j < len; j++)
-  {
-    params.rp.pid = pids[j];
-    SimpleCallback_dispatch(&DroidScope_callbacks[DECAF_PROCESSES_REMOVE_PROCESS_CB], &params);
-  }
 
   if (len > 0)
   {
@@ -636,16 +577,8 @@ static int return_from_clone(CPUState *env){
 #if (1)
 void context_init(void)
 {
-  int i = 0;
-  for (i = 0; i < DECAF_PROCESSES_LAST_CB; i++)
-  {
-    //SimpleCallback_init(&DroidScope_callbacks[i]);
-  }
 
-  //contextCSHandle = panda_register_callback(NULL, DECAF_PGD_WRITE_CB, &Context_PGDWriteCallback, NULL);
   panda_cb callback;
-  //callback.before_block_exec = contextBBCallback;
-  //panda_register_callback(NULL, PANDA_CB_BEFORE_BLOCK_EXEC, callback);
   callback.return_from_fork = return_from_fork;
   panda_register_callback(NULL, PANDA_CB_VMI_AFTER_FORK, callback);
   callback.return_from_exec = return_from_exec;
@@ -658,21 +591,5 @@ void context_init(void)
 
 void context_close(void)
 {
-  int i = 0; 
-
-  for (i = 0; i < DECAF_PROCESSES_LAST_CB; i++)
-  {
-    SimpleCallback_clear(&DroidScope_callbacks[i]);
-  }
-  if (contextCSHandle != DECAF_NULL_HANDLE)
-  {
-    //DECAF_unregister_callback(DECAF_PGD_WRITE_CB, contextCSHandle);
-    contextCSHandle = DECAF_NULL_HANDLE;
-  }
-  if (contextBBHandle != DECAF_NULL_HANDLE)
-  {
-    //DECAF_unregister_callback(DECAF_BLOCK_BEGIN_CB, contextBBHandle);
-    contextBBHandle = DECAF_NULL_HANDLE;
-  }
 }
 #endif
