@@ -26,9 +26,13 @@ O_FILES=$(PLUGIN_TARGET_DIR)/DECAF_linux_vmi.o
 O_FILES+=$(PLUGIN_TARGET_DIR)/DECAF_main.o
 O_FILES+=$(PLUGIN_TARGET_DIR)/linux_vmi_main.o
 O_FILES+=$(PLUGIN_TARGET_DIR)/DroidScope/DS_Init.o
+O_FILES+=$(PLUGIN_TARGET_DIR)/DroidScope/DS_utils/SymbolMap.o
 O_FILES+=$(PLUGIN_TARGET_DIR)/DroidScope/linuxAPI/Context.o
 O_FILES+=$(PLUGIN_TARGET_DIR)/DroidScope/linuxAPI/ModuleServer.o
 O_FILES+=$(PLUGIN_TARGET_DIR)/DroidScope/linuxAPI/ProcessInfo.o
+O_FILES+=$(PLUGIN_TARGET_DIR)/utils/TULStringMapWrapper.o
+O_FILES+=$(PLUGIN_TARGET_DIR)/utils/OutputWrapper.o
+O_FILES+=$(PLUGIN_TARGET_DIR)/utils/HelperFunctions.o
 
 $(PLUGIN_TARGET_DIR)/panda_$(PLUGIN_NAME).so: $(O_FILES)
 	$(call quiet-command,$(CXX) $(QEMU_CFLAGS) -shared -o $@ $^ $(LIBS),"  PLUGIN  $@")
