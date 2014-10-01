@@ -38,6 +38,7 @@ extern "C" {
 #include <fcntl.h>
 #include "panda_plugin.h"
 #include "../taint/taint_ext.h"
+#include "../linux_vmi/linux_vmi_ext.h"
 
     // struct iovec is {void* p, size_t len} which is target-specific
 //TODO: fail on 64-bit ARM
@@ -69,7 +70,6 @@ static void registerSyscallListeners(void);
 
 #if defined(CONFIG_PANDA_VMI)
 extern "C" {
-#include "introspection/DroidScope/LinuxAPI.h"
 // sched.h contains only preprocessor defines to constant literals
 #include <linux/sched.h>
 }
@@ -316,6 +316,7 @@ struct StaticBlock {
         if(TRACK_TAINT){
             init_taint_api();
         }
+        init_linux_vmi_api();
         registerSyscallListeners();
     }
 };
