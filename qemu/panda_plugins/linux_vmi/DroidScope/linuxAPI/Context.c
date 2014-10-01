@@ -49,14 +49,14 @@
 #include "panda_plugin.h"
 
 gpid_t curProcessPID = (-1);
-static gpa_t curProcessPGD = 0;
+static target_asid_t curProcessPGD = 0;
 
 inline gpid_t getCurrentPID(void)
 {
   return (curProcessPID);
 }
 
-inline gpa_t getCurrentPGD(void)
+inline target_asid_t getCurrentPGD(void)
 {
   return (curProcessPGD);
 }
@@ -69,7 +69,6 @@ int bSkipNextPGDUpdate = 0;
 
 void updateProcessModuleList(CPUState* env, gpid_t pid)
 {
-  DECAF_Processes_Callback_Params params;
   target_ulong task = 0;
   target_ulong i = 0;
   char name[MAX_PROCESS_INFO_NAME_LEN];
@@ -237,8 +236,6 @@ inline void linux_print_mod(Monitor* mon, gpid_t pid)
  */
 gva_t updateProcessListByTask(CPUState* env, gva_t task, int updateMask, int bNeedMark)
 {
-  DECAF_Processes_Callback_Params params;
-
   gpid_t pid;
   gpid_t parentPid;
   gpid_t tgid;
@@ -346,8 +343,6 @@ void updateProcessList(CPUState* env, target_asid_t newpgd, int updateMask)
   {
     return;
   }
-
-  DECAF_Processes_Callback_Params params;
 
   gva_t task = DECAF_get_current_process(env);
 
@@ -536,23 +531,6 @@ int contextBBCallback(CPUState* env, TranslationBlock* tb)
   return;
 }
 
-int contextCondFunc (DECAF_callback_type_t cbType, gva_t curPC, gva_t nextPC)
-{
-  DEFENSIVE_CHECK1(cbType != DECAF_BLOCK_BEGIN_CB, 0);
-
-  if ( (curPC == SET_TASK_COMM_ADDR)
-       || (curPC == DO_FORK_ADDR)
-       || (curPC == DO_EXECVE_ADDR)
-       || (curPC == DO_PRCTL_ADDR)
-       || (curPC == DO_CLONE_ADDR)
-       || ((Context_retAddr != INV_ADDR) && (curPC == Context_retAddr))
-     )
-  {
-    return (1);
-  }
-
-  return (0);
-}
 #endif
 
 #if defined(TARGET_ARM)
