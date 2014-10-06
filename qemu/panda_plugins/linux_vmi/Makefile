@@ -11,18 +11,32 @@ include ../panda.mak
 QEMU_CXXFLAGS+=-std=c++11
 # LIBS+=
 
-# The main rule for your plugin. Please stick with the panda_ naming
-# convention.
-#$(PLUGIN_TARGET_DIR)/DECAF_linux_vmi.o: $(PLUGIN_SRC_ROOT)/$(PLUGIN_NAME)/DECAF_linux_vmi.c
-#$(PLUGIN_TARGET_DIR)/DECAF_main.o: $(PLUGIN_SRC_ROOT)/$(PLUGIN_NAME)/DECAF_main.c
-#$(PLUGIN_TARGET_DIR)/linux_vmi_main.o: $(PLUGIN_SRC_ROOT)/$(PLUGIN_NAME)/linux_vmi_main.cpp
-#$(PLUGIN_TARGET_DIR)/oidScope/DS_Init.o: $(PLUGIN_SRC_ROOT)/$(PLUGIN_NAME)/DroidScope/DS_Init.c
-#$(PLUGIN_TARGET_DIR)/Context.o: $(PLUGIN_SRC_ROOT)/$(PLUGIN_NAME)/DroidScope/linuxAPI/Context.c
-#$(PLUGIN_TARGET_DIR)/ModuleServer.o: $(PLUGIN_SRC_ROOT)/$(PLUGIN_NAME)/DroidScope/linuxAPI/ModuleServer.cpp
-#$(PLUGIN_TARGET_DIR)/ProcessInfo.o: $(PLUGIN_SRC_ROOT)/$(PLUGIN_NAME)/DroidScope/linuxAPI/ProcessInfo.cpp
+DS_UTIL_DIR:
+	mkdir -p $(PLUGIN_TARGET_DIR)/DroidScope/DS_utils
 
+UTIL_DIR:
+	mkdir -p $(PLUGIN_TARGET_DIR)/utils
 
-O_FILES=$(PLUGIN_TARGET_DIR)/DECAF_linux_vmi.o
+DS_LINAPI_DIR:
+	mkdir -p $(PLUGIN_TARGET_DIR)/DroidScope/linuxAPI
+
+DS_DIR:
+	mkdir -p $(PLUGIN_TARGET_DIR)/DroidScope
+
+# make the subdirs of the plugin director
+#$(PLUGIN_TARGET_DIR)/DECAF_linux_vmi.o
+#$(PLUGIN_TARGET_DIR)/DECAF_main.o
+#$(PLUGIN_TARGET_DIR)/linux_vmi_main.o
+$(PLUGIN_TARGET_DIR)/DroidScope/DS_Init.o: DS_DIR
+$(PLUGIN_TARGET_DIR)/DroidScope/DS_utils/SymbolMap.o: DS_UTIL_DIR
+$(PLUGIN_TARGET_DIR)/DroidScope/linuxAPI/Context.o: DS_LINAPI_DIR
+$(PLUGIN_TARGET_DIR)/DroidScope/linuxAPI/ModuleServer.o: DS_LINAPI_DIR
+$(PLUGIN_TARGET_DIR)/DroidScope/linuxAPI/ProcessInfo.o: DS_LINAPI_DIR
+$(PLUGIN_TARGET_DIR)/utils/TULStringMapWrapper.o: UTIL_DIR
+$(PLUGIN_TARGET_DIR)/utils/OutputWrapper.o: UTIL_DIR
+$(PLUGIN_TARGET_DIR)/utils/HelperFunctions.o: UTIL_DIR
+
+O_FILES= $(PLUGIN_TARGET_DIR)/DECAF_linux_vmi.o
 O_FILES+=$(PLUGIN_TARGET_DIR)/DECAF_main.o
 O_FILES+=$(PLUGIN_TARGET_DIR)/linux_vmi_main.o
 O_FILES+=$(PLUGIN_TARGET_DIR)/DroidScope/DS_Init.o

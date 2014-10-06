@@ -3551,15 +3551,6 @@ mkdir -p $target_dir/android/camera
 mkdir -p $target_dir/telephony
 mkdir -p $target_dir/panda_plugins
 mkdir -p $target_dir/panda_plugins/utils
-mkdir -p $target_dir/panda_plugins/DroidScope
-mkdir -p $target_dir/panda_plugins/DroidScope/dalvik
-mkdir -p $target_dir/panda_plugins/DroidScope/dalvik/libdex
-mkdir -p $target_dir/panda_plugins/DroidScope/dalvik/vm
-mkdir -p $target_dir/panda_plugins/DroidScope/dalvik/vm/interp
-mkdir -p $target_dir/panda_plugins/DroidScope/dalvik/vm/oo
-mkdir -p $target_dir/panda_plugins/DroidScope/DS_utils
-mkdir -p $target_dir/panda_plugins/DroidScope/dalvikAPI
-mkdir -p $target_dir/panda_plugins/DroidScope/linuxAPI
 
 
 if test "$target" = "arm-linux-user" -o "$target" = "armeb-linux-user" -o "$target" = "arm-bsd-user" -o "$target" = "armeb-bsd-user" ; then
