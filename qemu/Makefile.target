@@ -562,7 +562,11 @@ clean:
 	rm -f *.o *.a *~ $(PROGS) nwfpe/*.o fpu/*.o
 	rm -f *.d */*.d tcg/*.o ide/*.o 9pfs/*.o panda/*.o *.bc *.bc1 *.bc2
 	rm -f hmp-commands.h qmp-commands-old.h gdbstub-xml.c
-	rm -f panda_plugins/* panda_tools/*
+	rm -f panda_plugins/DroidScope/DS_utils/*.*
+	rm -f panda_plugins/DroidScope/linuxAPI/*.*
+	rm -f panda_plugins/DroidScope/*.*
+	rm -f panda_plugins/utils/*.*
+	rm -f panda_plugins/*.* panda_tools/*
 
 ifdef CONFIG_TRACE_SYSTEMTAP
 	rm -f *.stp
